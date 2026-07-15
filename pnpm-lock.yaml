@@ -40,6 +40,32 @@ importers:
         specifier: ^5.4.5
         version: 5.9.3
 
+  packages/auth:
+    dependencies:
+      '@tlevor/types':
+        specifier: workspace:*
+        version: link:../types
+    devDependencies:
+      '@types/node':
+        specifier: ^20.12.7
+        version: 20.19.43
+      typescript:
+        specifier: ^5.4.5
+        version: 5.9.3
+
+  packages/cache:
+    dependencies:
+      '@tlevor/types':
+        specifier: workspace:*
+        version: link:../types
+    devDependencies:
+      '@types/node':
+        specifier: ^20.12.7
+        version: 20.19.43
+      typescript:
+        specifier: ^5.4.5
+        version: 5.9.3
+
   packages/cli:
     dependencies:
       '@tlevor/types':
@@ -113,7 +139,33 @@ importers:
         specifier: ^5.4.5
         version: 5.9.3
 
+  packages/orm:
+    dependencies:
+      '@tlevor/types':
+        specifier: workspace:*
+        version: link:../types
+    devDependencies:
+      '@types/node':
+        specifier: ^20.12.7
+        version: 20.19.43
+      typescript:
+        specifier: ^5.4.5
+        version: 5.9.3
+
   packages/router:
+    dependencies:
+      '@tlevor/types':
+        specifier: workspace:*
+        version: link:../types
+    devDependencies:
+      '@types/node':
+        specifier: ^20.12.7
+        version: 20.19.43
+      typescript:
+        specifier: ^5.4.5
+        version: 5.9.3
+
+  packages/swagger:
     dependencies:
       '@tlevor/types':
         specifier: workspace:*
