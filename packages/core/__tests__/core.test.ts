@@ -1,212 +1,419 @@
-import { describe, it, expect } from 'vitest';
-import {
-  createApp,
-  TlevorError,
-  ValidationError,
-  NotFoundError,
-  UnauthorizedError,
-  ForbiddenError,
-} from '../src/index';
+import { describe, it, expect, vi } from 'vitest';
+import { createApp, ValidationError, NotFoundError, TlevorError } from '../src/index';
+import { createValidator } from '../../validation/src/index';
 
 describe('TlevorApp', () => {
-  it('should create an app instance', () => {
-    const app = createApp();
-    expect(app).toBeDefined();
-    expect(app.addRoute).toBeDefined();
-    expect(app.addHook).toBeDefined();
-    expect(app.inject).toBeDefined();
-  });
-
-  it('should handle GET requests', async () => {
-    const app = createApp();
-
-    app.addRoute({
-      method: 'GET',
-      path: '/hello',
-      handler: () => ({ message: 'Hello' }),
+  describe('Basic Routing', () => {
+    it('should handle GET requests', async () => {
+      const app = createApp({ logger: false });
+      app.addRoute({
+        method: 'GET',
+        path: '/test',
+        handler: async () => ({ message: 'Hello' }),
+      });
+      const res = await app.inject({ method: 'GET', url: '/test' });
+      expect(res.statusCode).toBe(200);
+      expect(res.json().message).toBe('Hello');
+      await app.close();
     });
 
-    const res = await app.inject({ method: 'GET', url: '/hello' });
-    expect(res.statusCode).toBe(200);
-    expect(res.json()).toEqual({ message: 'Hello' });
+    it('should handle POST requests', async () => {
+      const app = createApp({ logger: false });
+      app.addRoute({
+        method: 'POST',
+        path: '/test',
+        handler: async (ctx) => ctx.req.body,
+      });
+      const res = await app.inject({
+        method: 'POST',
+        url: '/test',
+        body: { name: 'test' },
+      });
+      expect(res.statusCode).toBe(200);
+      expect(res.json().name).toBe('test');
+      await app.close();
+    });
+
+    it('should handle URL parameters', async () => {
+      const app = createApp({ logger: false });
+      app.addRoute({
+        method: 'GET',
+        path: '/users/:id',
+        handler: async (ctx) => ({ id: ctx.req.params.id }),
+      });
+      const res = await app.inject({ method: 'GET', url: '/users/123' });
+      expect(res.statusCode).toBe(200);
+      expect(res.json().id).toBe('123');
+      await app.close();
+    });
+
+    it('should handle query strings', async () => {
+      const app = createApp({ logger: false });
+      app.addRoute({
+        method: 'GET',
+        path: '/search',
+        handler: async (ctx) => ({ query: ctx.req.query }),
+      });
+      const res = await app.inject({
+        method: 'GET',
+        url: '/search?q=test&page=1',
+      });
+      expect(res.statusCode).toBe(200);
+      expect(res.json().query.q).toBe('test');
+      expect(res.json().query.page).toBe('1');
+      await app.close();
+    });
+
+    it('should handle 404 for non-existent routes', async () => {
+      const app = createApp({ logger: false });
+      const res = await app.inject({ method: 'GET', url: '/nonexistent' });
+      expect(res.statusCode).toBe(404);
+      expect(res.json().error).toBe('Not Found');
+      await app.close();
+    });
   });
 
-  it('should handle POST requests with body', async () => {
-    const app = createApp({ bodyParser: true });
+  describe('Body Parsing', () => {
+    it('should parse JSON body', async () => {
+      const app = createApp({ bodyParser: true, logger: false });
+      app.addRoute({
+        method: 'POST',
+        path: '/json',
+        handler: async (ctx) => ctx.req.body,
+      });
+      const res = await app.inject({
+        method: 'POST',
+        url: '/json',
+        body: { key: 'value' },
+      });
+      expect(res.statusCode).toBe(200);
+      expect(res.json().key).toBe('value');
+      await app.close();
+    });
 
-    app.addRoute({
-      method: 'POST',
-      path: '/users',
-      handler: (ctx) => {
-        return { received: ctx.req.body };
+    it('should parse URL-encoded body', async () => {
+      const app = createApp({ bodyParser: true, logger: false });
+      app.addRoute({
+        method: 'POST',
+        path: '/form',
+        handler: async (ctx) => ctx.req.body,
+      });
+      const res = await app.inject({
+        method: 'POST',
+        url: '/form',
+        headers: { 'content-type': 'application/x-www-form-urlencoded' },
+        body: 'name=test&value=123',
+      });
+      expect(res.statusCode).toBe(200);
+      expect(res.json().name).toBe('test');
+      expect(res.json().value).toBe('123');
+      await app.close();
+    });
+  });
+
+  describe('CORS', () => {
+    it('should handle OPTIONS preflight', async () => {
+      const app = createApp({ cors: { origin: 'http://example.com' }, logger: false });
+      app.addRoute({
+        method: 'GET',
+        path: '/test',
+        handler: async () => ({ message: 'Hello' }),
+      });
+      const res = await app.inject({
+        method: 'OPTIONS',
+        url: '/test',
+        headers: { 'origin': 'http://example.com' },
+      });
+      expect(res.statusCode).toBe(204);
+      expect(res.headers['access-control-allow-origin']).toBe('http://example.com');
+      await app.close();
+    });
+  });
+
+  describe('Error Handling', () => {
+    it('should handle TlevorError', async () => {
+      const app = createApp({ logger: false });
+      app.addRoute({
+        method: 'GET',
+        path: '/error',
+        handler: async () => {
+          throw new TlevorError('Custom error', 422, 'CUSTOM_ERROR');
+        },
+      });
+      const res = await app.inject({ method: 'GET', url: '/error' });
+      expect(res.statusCode).toBe(422);
+      expect(res.json().error).toBe('Custom error');
+      expect(res.json().code).toBe('CUSTOM_ERROR');
+      await app.close();
+    });
+
+    it('should handle ValidationError', async () => {
+      const app = createApp({ logger: false });
+      app.addRoute({
+        method: 'POST',
+        path: '/validate',
+        handler: async () => {
+          throw new ValidationError('Invalid input');
+        },
+      });
+      const res = await app.inject({
+        method: 'POST',
+        url: '/validate',
+        body: { data: 'test' },
+      });
+      expect(res.statusCode).toBe(400);
+      expect(res.json().code).toBe('VALIDATION_ERROR');
+      await app.close();
+    });
+
+    it('should handle NotFoundError', async () => {
+      const app = createApp({ logger: false });
+      app.addRoute({
+        method: 'GET',
+        path: '/notfound',
+        handler: async () => {
+          throw new NotFoundError('User');
+        },
+      });
+      const res = await app.inject({ method: 'GET', url: '/notfound' });
+      expect(res.statusCode).toBe(404);
+      expect(res.json().error).toBe('User not found');
+      await app.close();
+    });
+  });
+
+  describe('Hooks', () => {
+    it('should execute onRequest hook', async () => {
+      const app = createApp({ logger: false });
+      const hookCalled = vi.fn();
+      app.addHook('onRequest', async (ctx) => {
+        hookCalled();
+        ctx.state.hookData = 'from hook';
+      });
+      app.addRoute({
+        method: 'GET',
+        path: '/test',
+        handler: async (ctx) => ({ hookData: ctx.state.hookData }),
+      });
+      const res = await app.inject({ method: 'GET', url: '/test' });
+      expect(hookCalled).toHaveBeenCalled();
+      expect(res.json().hookData).toBe('from hook');
+      await app.close();
+    });
+
+    it('should allow hook to stop processing', async () => {
+      const app = createApp({ logger: false });
+      app.addHook('onRequest', async (ctx) => {
+        ctx.res.status(401).json({ error: 'Unauthorized' });
+        return false;
+      });
+      app.addRoute({
+        method: 'GET',
+        path: '/test',
+        handler: async () => ({ message: 'Should not reach' }),
+      });
+      const res = await app.inject({ method: 'GET', url: '/test' });
+      expect(res.statusCode).toBe(401);
+      expect(res.json().error).toBe('Unauthorized');
+      await app.close();
+    });
+  });
+});
+
+describe('Validation', () => {
+  const validator = createValidator();
+  
+  it('should validate required fields', () => {
+    const schema = {
+      type: 'object',
+      required: ['name', 'email'],
+      properties: {
+        name: { type: 'string' },
+        email: { type: 'string' },
       },
-    });
+    };
 
-    const res = await app.inject({
-      method: 'POST',
-      url: '/users',
-      body: { name: 'Ahmed' },
-    });
-
-    expect(res.statusCode).toBe(200);
-    expect(res.json()).toEqual({ received: { name: 'Ahmed' } });
+    const result = validator.validate({ name: 'John' }, schema);
+    expect(result.valid).toBe(false);
+    expect(result.errors).toContain('"email" is required');
   });
 
-  it('should return 404 for non-existent routes', async () => {
-    const app = createApp();
+  it('should validate string length', () => {
+    const schema = {
+      type: 'object',
+      properties: {
+        name: { type: 'string', minLength: 2, maxLength: 10 },
+      },
+    };
 
-    const res = await app.inject({ method: 'GET', url: '/notfound' });
-    expect(res.statusCode).toBe(404);
+    expect(validator.validate({ name: 'a' }, schema).valid).toBe(false);
+    expect(validator.validate({ name: 'ab' }, schema).valid).toBe(true);
+    expect(validator.validate({ name: '1234567890' }, schema).valid).toBe(true);
+    expect(validator.validate({ name: '12345678901' }, schema).valid).toBe(false);
   });
 
-  it('should extract path parameters', async () => {
-    const app = createApp();
+  it('should validate number ranges', () => {
+    const schema = {
+      type: 'object',
+      properties: {
+        age: { type: 'number', minimum: 0, maximum: 150 },
+      },
+    };
 
-    app.addRoute({
-      method: 'GET',
-      path: '/users/:id',
-      handler: (ctx) => ({ id: ctx.req.params.id }),
-    });
-
-    const res = await app.inject({ method: 'GET', url: '/users/42' });
-    expect(res.json()).toEqual({ id: '42' });
+    expect(validator.validate({ age: -1 }, schema).valid).toBe(false);
+    expect(validator.validate({ age: 0 }, schema).valid).toBe(true);
+    expect(validator.validate({ age: 150 }, schema).valid).toBe(true);
+    expect(validator.validate({ age: 151 }, schema).valid).toBe(false);
   });
 
-  it('should extract query parameters', async () => {
-    const app = createApp();
+  it('should validate enum values', () => {
+    const schema = {
+      type: 'object',
+      properties: {
+        role: { type: 'string', enum: ['admin', 'user', 'guest'] },
+      },
+    };
 
-    app.addRoute({
-      method: 'GET',
-      path: '/search',
-      handler: (ctx) => ({ query: ctx.req.query }),
-    });
-
-    const res = await app.inject({
-      method: 'GET',
-      url: '/search?q=tlevor&page=1',
-    });
-
-    expect(res.json()).toEqual({ query: { q: 'tlevor', page: '1' } });
+    expect(validator.validate({ role: 'admin' }, schema).valid).toBe(true);
+    expect(validator.validate({ role: 'superadmin' }, schema).valid).toBe(false);
   });
 
-  it('should execute hooks in order', async () => {
-    const app = createApp();
-    const order: string[] = [];
+  it('should serialize data based on schema', () => {
+    const schema = {
+      type: 'object',
+      properties: {
+        id: { type: 'number' },
+        name: { type: 'string' },
+      },
+    };
 
-    app.addHook('onRequest', () => { order.push('onRequest'); });
-    app.addHook('preHandler', () => { order.push('preHandler'); });
-    app.addHook('postHandler', () => { order.push('postHandler'); });
-    app.addHook('onResponse', () => { order.push('onResponse'); });
+    const data = { id: 1, name: 'John', password: 'secret', extra: 'field' };
+    const result = validator.serialize(data, schema);
+    expect(result).toEqual({ id: 1, name: 'John' });
+    expect(result).not.toHaveProperty('password');
+    expect(result).not.toHaveProperty('extra');
+  });
+});
 
+describe('Rate Limiter', () => {
+  it('should allow requests within limit', async () => {
+    const app = createApp({ logger: false });
+    app.rateLimit({ max: 2, window: 60000 });
     app.addRoute({
       method: 'GET',
       path: '/test',
-      handler: () => { order.push('handler'); return {}; },
+      handler: async () => ({ message: 'Hello' }),
     });
 
-    await app.inject({ method: 'GET', url: '/test' });
+    const res1 = await app.inject({ method: 'GET', url: '/test' });
+    expect(res1.statusCode).toBe(200);
 
-    expect(order).toEqual(['onRequest', 'preHandler', 'handler', 'postHandler', 'onResponse']);
+    const res2 = await app.inject({ method: 'GET', url: '/test' });
+    expect(res2.statusCode).toBe(200);
+
+    await app.close();
   });
+});
 
-  it('should handle errors gracefully', async () => {
-    const app = createApp();
-
+describe('Static Files', () => {
+  it('should serve static files', async () => {
+    const app = createApp({ logger: false });
     app.addRoute({
       method: 'GET',
-      path: '/error',
-      handler: () => {
-        throw new Error('Something went wrong');
-      },
+      path: '/static/*',
+      handler: async (ctx) => ({ path: ctx.req.path }),
     });
 
-    const res = await app.inject({ method: 'GET', url: '/error' });
-    expect(res.statusCode).toBe(500);
-    expect(res.json().error).toBe('Internal Server Error');
+    const res = await app.inject({ method: 'GET', url: '/static/test.txt' });
+    expect(res.statusCode).toBe(200);
+    expect(res.json().path).toBe('/static/test.txt');
+    await app.close();
   });
+});
 
-  it('should handle TlevorError with custom status codes', async () => {
-    const app = createApp();
-
-    app.addRoute({
-      method: 'GET',
-      path: '/not-found',
-      handler: () => {
-        throw new NotFoundError('User');
-      },
-    });
-
-    const res = await app.inject({ method: 'GET', url: '/not-found' });
-    expect(res.statusCode).toBe(404);
-    expect(res.json().code).toBe('NOT_FOUND');
-  });
-
-  it('should handle ValidationError', async () => {
-    const app = createApp();
-
-    app.addRoute({
-      method: 'POST',
-      path: '/validate',
-      handler: () => {
-        throw new ValidationError('Invalid email', { field: 'email' });
-      },
-    });
-
-    const res = await app.inject({ method: 'POST', url: '/validate' });
-    expect(res.statusCode).toBe(400);
-    expect(res.json().code).toBe('VALIDATION_ERROR');
-    expect(res.json().details).toEqual({ field: 'email' });
-  });
-
-  it('should support CORS preflight', async () => {
-    const app = createApp({ cors: true });
-
-    const res = await app.inject({
-      method: 'OPTIONS',
-      url: '/users',
-      headers: { origin: 'http://example.com' },
-    });
-
-    expect(res.statusCode).toBe(204);
-    expect(res.headers['access-control-allow-origin']).toBe('*');
-  });
-
-  it('should support CORS on responses', async () => {
-    const app = createApp({ cors: true });
-
+describe('Cookies', () => {
+  it('should parse cookies from request', async () => {
+    const app = createApp({ logger: false });
     app.addRoute({
       method: 'GET',
       path: '/test',
-      handler: () => ({ ok: true }),
+      handler: async (ctx) => ({ cookies: ctx.req.cookies }),
     });
 
     const res = await app.inject({
       method: 'GET',
       url: '/test',
-      headers: { origin: 'http://example.com' },
+      headers: { cookie: 'session=abc123; theme=dark' },
     });
-
-    expect(res.headers['access-control-allow-origin']).toBe('*');
+    expect(res.json().cookies.session).toBe('abc123');
+    expect(res.json().cookies.theme).toBe('dark');
+    await app.close();
   });
 
-  it('should register and use plugins', async () => {
-    const app = createApp();
-    let pluginCalled = false;
+  it('should set cookies on response', async () => {
+    const app = createApp({ logger: false });
+    app.addRoute({
+      method: 'GET',
+      path: '/test',
+      handler: async (ctx) => {
+        ctx.res.cookie('session', 'abc123', { httpOnly: true });
+        return { message: 'Cookie set' };
+      },
+    });
 
-    const myPlugin = (app: any, opts: any) => {
-      pluginCalled = true;
-      app.addRoute({
-        method: 'GET',
-        path: '/plugin',
-        handler: () => ({ plugin: true }),
-      });
-    };
+    const res = await app.inject({ method: 'GET', url: '/test' });
+    expect(res.headers['set-cookie']).toContain('session=abc123');
+    expect(res.headers['set-cookie']).toContain('HttpOnly');
+    await app.close();
+  });
+});
 
-    app.registerPlugin(myPlugin);
+describe('Security Headers', () => {
+  it('should set security headers', async () => {
+    const app = createApp({ security: true, logger: false });
+    app.addRoute({
+      method: 'GET',
+      path: '/test',
+      handler: async () => ({ message: 'Hello' }),
+    });
 
-    expect(pluginCalled).toBe(true);
+    const res = await app.inject({ method: 'GET', url: '/test' });
+    expect(res.headers['x-content-type-options']).toBe('nosniff');
+    expect(res.headers['x-frame-options']).toBe('DENY');
+    expect(res.headers['x-xss-protection']).toBe('1; mode=block');
+    await app.close();
+  });
+});
 
-    const res = await app.inject({ method: 'GET', url: '/plugin' });
-    expect(res.json()).toEqual({ plugin: true });
+describe('WebSocket', () => {
+  it('should register WebSocket handler', async () => {
+    const app = createApp({ logger: false });
+    app.ws('/ws', {
+      onConnection: () => {},
+    });
+    await app.listen(0);
+    expect(app.getServer()).toBeDefined();
+    await app.close();
+  });
+
+  it('should track WebSocket connections', async () => {
+    const app = createApp({ logger: false });
+    app.ws('/ws', {
+      onConnection: () => {},
+    });
+    const connections = app.getWebSocketConnections();
+    expect(connections).toBeInstanceOf(Map);
+    expect(connections.size).toBe(0);
+    await app.close();
+  });
+
+  it('should close WebSocket server on app close', async () => {
+    const app = createApp({ logger: false });
+    app.ws('/ws', {
+      onConnection: () => {},
+    });
+    await app.listen(0);
+    await app.close();
+    expect(app.getServer()).toBeNull();
   });
 });

@@ -1,16 +1,16 @@
 {
-  "name": "@tlevor/validation",
+  "name": "@tlevor/cli",
   "version": "0.1.0",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "bin": {
+    "tlevor": "dist/index.js"
+  },
   "scripts": {
     "build": "tsc"
   },
   "dependencies": {
-    "@tlevor/types": "workspace:*",
-    "@sinclair/typebox": "^0.32.0",
-    "ajv": "^8.12.0",
-    "ajv-formats": "^2.1.1"
+    "@tlevor/types": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^20.12.7",

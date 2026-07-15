@@ -12,6 +12,7 @@ export interface TlevorRequest<Body = any, Query = any, Params = any> {
   query: Query;
   body: Body;
   ip: string;
+  cookies: Record<string, string>;
 }
 
 export interface TlevorResponse {
@@ -24,6 +25,8 @@ export interface TlevorResponse {
   json(payload: any): void;
   text(payload: string): void;
   redirect(url: string, code?: number): void;
+  cookie(name: string, value: string, options?: { httpOnly?: boolean; secure?: boolean; maxAge?: number; path?: string; sameSite?: 'strict' | 'lax' | 'none' }): this;
+  clearCookie(name: string): this;
 }
 
 export interface TlevorContext<Body = any, Query = any, Params = any, State = Record<string, any>> {
@@ -66,11 +69,23 @@ export type RouteHandler<
   TContext extends TlevorContext<Body, Query, Params, State> = TlevorContext<Body, Query, Params, State>
 > = (ctx: TContext) => any | Promise<any>;
 
+export interface ValidationSchema {
+  type?: string;
+  properties?: Record<string, any>;
+  required?: string[];
+  minLength?: number;
+  maxLength?: number;
+  minimum?: number;
+  maximum?: number;
+  enum?: any[];
+  [key: string]: any;
+}
+
 export interface RouteSchema {
-  body?: any;
-  query?: any;
-  params?: any;
-  response?: Record<number, any>;
+  body?: ValidationSchema;
+  query?: ValidationSchema;
+  params?: ValidationSchema;
+  response?: ValidationSchema;
 }
 
 export interface RouteOptions {
@@ -91,10 +106,39 @@ export interface PluginMetadata {
   dependencies?: string[];
 }
 
+export interface RateLimitOptions {
+  max?: number;
+  window?: number;
+  message?: string;
+}
+
+export interface WebSocketOptions {
+  path?: string;
+}
+
+export interface WebSocketConnection {
+  id: string;
+  send(data: string | Buffer): void;
+  close(code?: number, reason?: string): void;
+  on(event: string, handler: (...args: any[]) => void): void;
+  readonly remoteAddress: string;
+  readonly request: IncomingMessage;
+}
+
+export interface WebSocketHandler {
+  onConnection?: (conn: WebSocketConnection, req: IncomingMessage) => void;
+  onMessage?: (conn: WebSocketConnection, data: any) => void;
+  onClose?: (conn: WebSocketConnection, code: number, reason: string) => void;
+  onError?: (conn: WebSocketConnection, error: Error) => void;
+}
+
 export interface TlevorApp {
   addRoute(options: RouteOptions): void;
   addHook(name: HookName, handler: HookHandler): void;
+  use(middleware: HookHandler): void;
   registerPlugin(plugin: PluginHandler, opts?: any): void;
+  rateLimit(options: RateLimitOptions): void;
+  ws(path: string, handler: WebSocketHandler): void;
   inject(opts: InjectOptions): Promise<InjectResult>;
   listen(port: number, host?: string): Promise<void>;
   close(): Promise<void>;
