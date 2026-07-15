@@ -33,6 +33,7 @@ function createNode(path: string = ''): RouteNode {
 export class Router {
   private root: RouteNode;
   private routeCount: number = 0;
+  private staticRoutes: Map<string, Map<HTTPMethod, RouteHandler>> = new Map();
 
   constructor() {
     this.root = createNode('/');
@@ -41,6 +42,15 @@ export class Router {
   addRoute(method: HTTPMethod | HTTPMethod[], path: string, handler: RouteHandler): void {
     const methods = Array.isArray(method) ? method : [method];
     const normalizedPath = this.normalizePath(path);
+
+    // Cache static routes for fast lookup
+    if (!path.includes(':') && !path.includes('*')) {
+      if (!this.staticRoutes.has(normalizedPath)) {
+        this.staticRoutes.set(normalizedPath, new Map());
+      }
+      const routeMap = this.staticRoutes.get(normalizedPath)!;
+      for (const m of methods) routeMap.set(m, handler);
+    }
 
     let current = this.root;
     const segments = normalizedPath.split('/').filter(Boolean);
@@ -136,8 +146,14 @@ export class Router {
 
   findRouteByMethod(method: HTTPMethod, path: string): MatchResult | null {
     const normalizedPath = this.normalizePath(path);
-    const segments = normalizedPath.split('/').filter(Boolean);
 
+    // Fast path: static route lookup
+    const staticHandlers = this.staticRoutes.get(normalizedPath);
+    if (staticHandlers?.has(method)) {
+      return { handler: staticHandlers.get(method)!, method, params: {} };
+    }
+
+    const segments = normalizedPath.split('/').filter(Boolean);
     return this.matchNodeByMethod(this.root, segments, 0, {}, method);
   }
 

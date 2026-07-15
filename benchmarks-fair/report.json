@@ -1,0 +1,2450 @@
+{
+  "environment": {
+    "platform": "linux",
+    "arch": "x64",
+    "os": "PRETTY_NAME=\"Ubuntu 24.04.3 LTS\"\nNAME=\"Ubuntu\"",
+    "cpuModel": "AMD EPYC 7742 64-Core Processor",
+    "cpuCores": 4,
+    "totalMemGB": 7.8,
+    "freeMemGB": 2.7,
+    "nodeVersion": "v22.23.1",
+    "timestamp": "2026-07-15T03:09:05.435Z"
+  },
+  "methodology": {
+    "repetitions": 5,
+    "warmupSeconds": 3,
+    "scenarios": 8,
+    "frameworks": [
+      "Tlevor",
+      "Express",
+      "Fastify",
+      "Koa",
+      "Hono"
+    ]
+  },
+  "raw": {
+    "Tlevor": {
+      "GET JSON (100c, 10s)": {
+        "rps": [
+          9520.8,
+          9089.21,
+          10650.4,
+          8668.21,
+          10213.6
+        ],
+        "latP99": [
+          50,
+          49,
+          45,
+          52,
+          46
+        ],
+        "latP95": [
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        "latAvg": [
+          10.09,
+          10.59,
+          8.91,
+          11.15,
+          9.32
+        ],
+        "errors": [
+          null,
+          null,
+          null,
+          null,
+          null
+        ]
+      },
+      "GET Route Params (100c, 10s)": {
+        "rps": [
+          8498.21,
+          8757.6,
+          9438.21,
+          8788.4,
+          10460.8
+        ],
+        "latP99": [
+          53,
+          49,
+          46,
+          51,
+          44
+        ],
+        "latP95": [
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        "latAvg": [
+          11.38,
+          10.98,
+          10.15,
+          10.96,
+          9.1
+        ],
+        "errors": [
+          null,
+          null,
+          null,
+          null,
+          null
+        ]
+      },
+      "GET Text (100c, 10s)": {
+        "rps": [
+          9262.4,
+          9620,
+          9830.4,
+          8947.21,
+          10722.4
+        ],
+        "latP99": [
+          50,
+          49,
+          46,
+          51,
+          44
+        ],
+        "latP95": [
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        "latAvg": [
+          10.36,
+          10.03,
+          9.75,
+          10.75,
+          8.89
+        ],
+        "errors": [
+          null,
+          null,
+          null,
+          null,
+          null
+        ]
+      },
+      "POST Echo (100c, 10s)": {
+        "rps": [
+          8204.21,
+          7335,
+          7911.4,
+          9009,
+          8117.2
+        ],
+        "latP99": [
+          50,
+          56,
+          50,
+          46,
+          48
+        ],
+        "latP95": [
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        "latAvg": [
+          11.76,
+          13.19,
+          12.17,
+          10.61,
+          11.86
+        ],
+        "errors": [
+          null,
+          null,
+          null,
+          null,
+          null
+        ]
+      },
+      "GET Headers (100c, 10s)": {
+        "rps": [
+          10581.6,
+          8813.6,
+          8666.21,
+          10508,
+          9444.8
+        ],
+        "latP99": [
+          46,
+          53,
+          52,
+          45,
+          48
+        ],
+        "latP95": [
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        "latAvg": [
+          8.99,
+          10.93,
+          11.16,
+          9.08,
+          10.16
+        ],
+        "errors": [
+          null,
+          null,
+          null,
+          null,
+          null
+        ]
+      },
+      "GET JSON (10c, 10s)": {
+        "rps": [
+          8765.6,
+          7054.8,
+          7236.2,
+          8788.21,
+          7627.8
+        ],
+        "latP99": [
+          23,
+          27,
+          26,
+          24,
+          25
+        ],
+        "latP95": [
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        "latAvg": [
+          0.75,
+          1.03,
+          0.97,
+          0.75,
+          0.92
+        ],
+        "errors": [
+          null,
+          null,
+          null,
+          null,
+          null
+        ]
+      },
+      "GET JSON (500c, 10s)": {
+        "rps": [
+          11266.4,
+          10224,
+          10861.6,
+          10684.8,
+          10296.8
+        ],
+        "latP99": [
+          97,
+          116,
+          105,
+          112,
+          113
+        ],
+        "latP95": [
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        "latAvg": [
+          45,
+          49.71,
+          46.83,
+          47.34,
+          49.46
+        ],
+        "errors": [
+          null,
+          null,
+          null,
+          null,
+          null
+        ]
+      },
+      "Pipeline 10x10 (10s)": {
+        "rps": [
+          15176.8,
+          17094.41,
+          16382.4,
+          14427.6,
+          14468.8
+        ],
+        "latP99": [
+          38,
+          38,
+          38,
+          39,
+          40
+        ],
+        "latP95": [
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        "latAvg": [
+          6.11,
+          5.39,
+          5.62,
+          6.47,
+          6.43
+        ],
+        "errors": [
+          null,
+          null,
+          null,
+          null,
+          null
+        ]
+      }
+    },
+    "Express": {
+      "GET JSON (100c, 10s)": {
+        "rps": [
+          3050.8,
+          3066.64,
+          3059.2,
+          2917.6,
+          3408.8
+        ],
+        "latP99": [
+          78,
+          74,
+          76,
+          86,
+          65
+        ],
+        "latP95": [
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        "latAvg": [
+          32.32,
+          32.11,
+          32.22,
+          33.82,
+          28.81
+        ],
+        "errors": [
+          null,
+          null,
+          null,
+          null,
+          null
+        ]
+      },
+      "GET Route Params (100c, 10s)": {
+        "rps": [
+          2912,
+          3175,
+          2931.6,
+          3005.4,
+          3241.8
+        ],
+        "latP99": [
+          80,
+          75,
+          81,
+          79,
+          70
+        ],
+        "latP95": [
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        "latAvg": [
+          33.95,
+          30.98,
+          33.7,
+          32.8,
+          30.46
+        ],
+        "errors": [
+          null,
+          null,
+          null,
+          null,
+          null
+        ]
+      },
+      "GET Text (100c, 10s)": {
+        "rps": [
+          3019.6,
+          3170.4,
+          2884.82,
+          3425.6,
+          3293.2
+        ],
+        "latP99": [
+          76,
+          73,
+          86,
+          67,
+          72
+        ],
+        "latP95": [
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        "latAvg": [
+          32.64,
+          31.09,
+          34.18,
+          28.71,
+          29.94
+        ],
+        "errors": [
+          null,
+          null,
+          null,
+          null,
+          null
+        ]
+      },
+      "POST Echo (100c, 10s)": {
+        "rps": [
+          2553.1,
+          2709.9,
+          2336,
+          2636.5,
+          2422.1
+        ],
+        "latP99": [
+          94,
+          88,
+          97,
+          88,
+          93
+        ],
+        "latP95": [
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        "latAvg": [
+          38.67,
+          36.37,
+          42.34,
+          37.43,
+          40.87
+        ],
+        "errors": [
+          null,
+          null,
+          null,
+          null,
+          null
+        ]
+      },
+      "GET Headers (100c, 10s)": {
+        "rps": [
+          3251,
+          3282,
+          2655.2,
+          3111.4,
+          2937
+        ],
+        "latP99": [
+          67,
+          70,
+          89,
+          73,
+          76
+        ],
+        "latP95": [
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        "latAvg": [
+          30.27,
+          30,
+          37.3,
+          31.65,
+          33.54
+        ],
+        "errors": [
+          null,
+          null,
+          null,
+          null,
+          null
+        ]
+      },
+      "GET JSON (10c, 10s)": {
+        "rps": [
+          2442,
+          2541.4,
+          2313.81,
+          2430.6,
+          2305.2
+        ],
+        "latP99": [
+          34,
+          35,
+          37,
+          34,
+          36
+        ],
+        "latP95": [
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        "latAvg": [
+          3.59,
+          3.45,
+          3.82,
+          3.62,
+          3.85
+        ],
+        "errors": [
+          null,
+          null,
+          null,
+          null,
+          null
+        ]
+      },
+      "GET JSON (500c, 10s)": {
+        "rps": [
+          3165.4,
+          3195,
+          3548.4,
+          3125.8,
+          3095.6
+        ],
+        "latP99": [
+          323,
+          253,
+          277,
+          303,
+          312
+        ],
+        "latP95": [
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        "latAvg": [
+          157.22,
+          145.71,
+          139.91,
+          159.63,
+          161.37
+        ],
+        "errors": [
+          null,
+          null,
+          null,
+          null,
+          null
+        ]
+      },
+      "Pipeline 10x10 (10s)": {
+        "rps": [
+          3217.3,
+          3819.9,
+          4053.6,
+          3576.6,
+          3579.6
+        ],
+        "latP99": [
+          91,
+          69,
+          64,
+          72,
+          74
+        ],
+        "latP95": [
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        "latAvg": [
+          30.63,
+          25.68,
+          24.15,
+          27.47,
+          27.55
+        ],
+        "errors": [
+          null,
+          null,
+          null,
+          null,
+          null
+        ]
+      }
+    },
+    "Fastify": {
+      "GET JSON (100c, 10s)": {
+        "rps": [
+          9680.8,
+          11084.8,
+          9618.4,
+          9443,
+          11979.8
+        ],
+        "latP99": [
+          51,
+          47,
+          53,
+          49,
+          44
+        ],
+        "latP95": [
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        "latAvg": [
+          9.93,
+          8.62,
+          10.04,
+          10.19,
+          7.89
+        ],
+        "errors": [
+          null,
+          null,
+          null,
+          null,
+          null
+        ]
+      },
+      "GET Route Params (100c, 10s)": {
+        "rps": [
+          11921.6,
+          10655.2,
+          9087.8,
+          9077.21,
+          11303.2
+        ],
+        "latP99": [
+          44,
+          44,
+          53,
+          52,
+          43
+        ],
+        "latP95": [
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        "latAvg": [
+          7.96,
+          8.96,
+          10.6,
+          10.63,
+          8.36
+        ],
+        "errors": [
+          null,
+          null,
+          null,
+          null,
+          null
+        ]
+      },
+      "GET Text (100c, 10s)": {
+        "rps": [
+          11984,
+          10700.8,
+          11708.8,
+          9333.4,
+          11115.2
+        ],
+        "latP99": [
+          41,
+          45,
+          44,
+          48,
+          44
+        ],
+        "latP95": [
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        "latAvg": [
+          7.88,
+          8.89,
+          8.06,
+          10.37,
+          8.53
+        ],
+        "errors": [
+          null,
+          null,
+          null,
+          null,
+          null
+        ]
+      },
+      "POST Echo (100c, 10s)": {
+        "rps": [
+          6395.6,
+          6459.2,
+          6683.6,
+          5090.9,
+          6042.3
+        ],
+        "latP99": [
+          52,
+          57,
+          54,
+          70,
+          60
+        ],
+        "latP95": [
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        "latAvg": [
+          15.16,
+          15.04,
+          14.47,
+          19.25,
+          16.09
+        ],
+        "errors": [
+          null,
+          null,
+          null,
+          null,
+          null
+        ]
+      },
+      "GET Headers (100c, 10s)": {
+        "rps": [
+          9533.8,
+          9455,
+          10252.8,
+          8548.21,
+          9545.6
+        ],
+        "latP99": [
+          45,
+          49,
+          47,
+          52,
+          49
+        ],
+        "latP95": [
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        "latAvg": [
+          10.05,
+          10.2,
+          9.33,
+          11.37,
+          10.07
+        ],
+        "errors": [
+          null,
+          null,
+          null,
+          null,
+          null
+        ]
+      },
+      "GET JSON (10c, 10s)": {
+        "rps": [
+          7129,
+          7240,
+          8444.6,
+          8339.1,
+          8020.4
+        ],
+        "latP99": [
+          28,
+          27,
+          24,
+          24,
+          25
+        ],
+        "latP95": [
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        "latAvg": [
+          0.97,
+          0.97,
+          0.8,
+          0.81,
+          0.87
+        ],
+        "errors": [
+          null,
+          null,
+          null,
+          null,
+          null
+        ]
+      },
+      "GET JSON (500c, 10s)": {
+        "rps": [
+          10728.8,
+          12684.8,
+          10916,
+          12129.6,
+          10776
+        ],
+        "latP99": [
+          104,
+          95,
+          104,
+          95,
+          103
+        ],
+        "latP95": [
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        "latAvg": [
+          47.65,
+          39.82,
+          46.67,
+          41.12,
+          46.81
+        ],
+        "errors": [
+          null,
+          null,
+          null,
+          null,
+          null
+        ]
+      },
+      "Pipeline 10x10 (10s)": {
+        "rps": [
+          13692,
+          15896.4,
+          14476,
+          16041.1,
+          13025.6
+        ],
+        "latP99": [
+          44,
+          37,
+          40,
+          36,
+          42
+        ],
+        "latP95": [
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        "latAvg": [
+          6.83,
+          5.8,
+          6.43,
+          5.75,
+          7.21
+        ],
+        "errors": [
+          null,
+          null,
+          null,
+          null,
+          null
+        ]
+      }
+    },
+    "Koa": {
+      "GET JSON (100c, 10s)": {
+        "rps": [
+          6042,
+          6728,
+          6951.6,
+          7039.2,
+          6480.8
+        ],
+        "latP99": [
+          53,
+          52,
+          49,
+          50,
+          54
+        ],
+        "latP95": [
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        "latAvg": [
+          16.09,
+          14.38,
+          13.9,
+          13.73,
+          14.94
+        ],
+        "errors": [
+          null,
+          null,
+          null,
+          null,
+          null
+        ]
+      },
+      "GET Route Params (100c, 10s)": {
+        "rps": [
+          6298.8,
+          6312,
+          6418.8,
+          6577.6,
+          6213.6
+        ],
+        "latP99": [
+          54,
+          52,
+          53,
+          53,
+          56
+        ],
+        "latP95": [
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        "latAvg": [
+          15.43,
+          15.4,
+          15.09,
+          14.72,
+          15.64
+        ],
+        "errors": [
+          null,
+          null,
+          null,
+          null,
+          null
+        ]
+      },
+      "GET Text (100c, 10s)": {
+        "rps": [
+          6464.4,
+          6415.6,
+          6729.2,
+          6974.8,
+          6328.8
+        ],
+        "latP99": [
+          53,
+          55,
+          51,
+          51,
+          55
+        ],
+        "latP95": [
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        "latAvg": [
+          15.04,
+          15.12,
+          14.38,
+          13.87,
+          15.35
+        ],
+        "errors": [
+          null,
+          null,
+          null,
+          null,
+          null
+        ]
+      },
+      "POST Echo (100c, 10s)": {
+        "rps": [
+          5059.9,
+          5384.4,
+          5412.8,
+          4988.11,
+          5202.11
+        ],
+        "latP99": [
+          62,
+          58,
+          57,
+          67,
+          59
+        ],
+        "latP95": [
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        "latAvg": [
+          19.3,
+          18.13,
+          17.99,
+          19.63,
+          18.77
+        ],
+        "errors": [
+          null,
+          null,
+          null,
+          null,
+          null
+        ]
+      },
+      "GET Headers (100c, 10s)": {
+        "rps": [
+          6232.8,
+          5676.4,
+          6120.8,
+          6017.2,
+          5757.6
+        ],
+        "latP99": [
+          54,
+          57,
+          54,
+          57,
+          60
+        ],
+        "latP95": [
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        "latAvg": [
+          15.56,
+          17.16,
+          15.92,
+          16.14,
+          16.9
+        ],
+        "errors": [
+          null,
+          null,
+          null,
+          null,
+          null
+        ]
+      },
+      "GET JSON (10c, 10s)": {
+        "rps": [
+          5616.8,
+          4334.3,
+          4404.61,
+          4502.7,
+          4489.3
+        ],
+        "latP99": [
+          28,
+          32,
+          31,
+          31,
+          31
+        ],
+        "latP95": [
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        "latAvg": [
+          1.27,
+          1.8,
+          1.77,
+          1.71,
+          1.73
+        ],
+        "errors": [
+          null,
+          null,
+          null,
+          null,
+          null
+        ]
+      },
+      "GET JSON (500c, 10s)": {
+        "rps": [
+          8405.8,
+          7614.2,
+          7243.6,
+          7671.6,
+          7495.6
+        ],
+        "latP99": [
+          122,
+          140,
+          152,
+          143,
+          144
+        ],
+        "latP95": [
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        "latAvg": [
+          59.49,
+          66.77,
+          68.75,
+          66.02,
+          67.75
+        ],
+        "errors": [
+          null,
+          null,
+          null,
+          null,
+          null
+        ]
+      },
+      "Pipeline 10x10 (10s)": {
+        "rps": [
+          10004.8,
+          9068,
+          9741.8,
+          9085.21,
+          8982.4
+        ],
+        "latP99": [
+          43,
+          48,
+          48,
+          49,
+          50
+        ],
+        "latP95": [
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        "latAvg": [
+          9.5,
+          10.57,
+          9.77,
+          10.51,
+          10.64
+        ],
+        "errors": [
+          null,
+          null,
+          null,
+          null,
+          null
+        ]
+      }
+    },
+    "Hono": {
+      "GET JSON (100c, 10s)": {
+        "rps": [
+          9203.4,
+          7759,
+          10420,
+          8887.4,
+          8656.6
+        ],
+        "latP99": [
+          49,
+          57,
+          45,
+          48,
+          50
+        ],
+        "latP95": [
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        "latAvg": [
+          10.45,
+          12.5,
+          9.15,
+          10.82,
+          11.15
+        ],
+        "errors": [
+          null,
+          null,
+          null,
+          null,
+          null
+        ]
+      },
+      "GET Route Params (100c, 10s)": {
+        "rps": [
+          9755.8,
+          9744.6,
+          9680,
+          9270.21,
+          8197.8
+        ],
+        "latP99": [
+          49,
+          47,
+          49,
+          49,
+          53
+        ],
+        "latP95": [
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        "latAvg": [
+          9.8,
+          9.81,
+          9.87,
+          10.33,
+          11.81
+        ],
+        "errors": [
+          null,
+          null,
+          null,
+          null,
+          null
+        ]
+      },
+      "GET Text (100c, 10s)": {
+        "rps": [
+          11841.6,
+          11300.8,
+          10656,
+          11984.8,
+          10193.4
+        ],
+        "latP99": [
+          41,
+          46,
+          44,
+          42,
+          49
+        ],
+        "latP95": [
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        "latAvg": [
+          7.96,
+          8.38,
+          8.95,
+          7.88,
+          9.4
+        ],
+        "errors": [
+          null,
+          null,
+          null,
+          null,
+          null
+        ]
+      },
+      "POST Echo (100c, 10s)": {
+        "rps": [
+          7322,
+          6970.4,
+          6844,
+          7138.8,
+          7909.8
+        ],
+        "latP99": [
+          53,
+          53,
+          55,
+          49,
+          47
+        ],
+        "latP95": [
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        "latAvg": [
+          13.19,
+          13.86,
+          14.13,
+          13.51,
+          12.16
+        ],
+        "errors": [
+          null,
+          null,
+          null,
+          null,
+          null
+        ]
+      },
+      "GET Headers (100c, 10s)": {
+        "rps": [
+          7907.8,
+          7785.8,
+          7550.6,
+          8204.21,
+          8683.4
+        ],
+        "latP99": [
+          49,
+          50,
+          51,
+          52,
+          46
+        ],
+        "latP95": [
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        "latAvg": [
+          12.22,
+          12.41,
+          12.8,
+          11.72,
+          11.06
+        ],
+        "errors": [
+          null,
+          null,
+          null,
+          null,
+          null
+        ]
+      },
+      "GET JSON (10c, 10s)": {
+        "rps": [
+          6888.8,
+          6996.8,
+          6616,
+          7353.8,
+          7850.6
+        ],
+        "latP99": [
+          26,
+          27,
+          27,
+          25,
+          24
+        ],
+        "latP95": [
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        "latAvg": [
+          1.02,
+          1.01,
+          1.09,
+          0.93,
+          0.86
+        ],
+        "errors": [
+          null,
+          null,
+          null,
+          null,
+          null
+        ]
+      },
+      "GET JSON (500c, 10s)": {
+        "rps": [
+          10824.8,
+          10374.4,
+          9777.6,
+          10656.8,
+          11145.6
+        ],
+        "latP99": [
+          104,
+          109,
+          118,
+          107,
+          106
+        ],
+        "latP95": [
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        "latAvg": [
+          46.54,
+          49.09,
+          51.98,
+          47.93,
+          45.93
+        ],
+        "errors": [
+          null,
+          null,
+          null,
+          null,
+          null
+        ]
+      },
+      "Pipeline 10x10 (10s)": {
+        "rps": [
+          12788.8,
+          13990.4,
+          12099.2,
+          12676,
+          12588.8
+        ],
+        "latP99": [
+          42,
+          40,
+          43,
+          41,
+          41
+        ],
+        "latP95": [
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        "latAvg": [
+          7.35,
+          6.66,
+          7.78,
+          7.42,
+          7.45
+        ],
+        "errors": [
+          null,
+          null,
+          null,
+          null,
+          null
+        ]
+      }
+    }
+  },
+  "summary": {
+    "Tlevor": {
+      "GET JSON (100c, 10s)": {
+        "rps": {
+          "mean": 9628.4,
+          "std": 722.7,
+          "min": 8668.2,
+          "max": 10650.4
+        },
+        "latP99": {
+          "mean": 48.4,
+          "std": 2.6,
+          "min": 45,
+          "max": 52
+        },
+        "serverCPU": {
+          "mean": 47.4,
+          "std": 2.6
+        },
+        "serverMemPct": {
+          "mean": 0.9,
+          "std": 0
+        },
+        "runs": 5
+      },
+      "GET Route Params (100c, 10s)": {
+        "rps": {
+          "mean": 9188.6,
+          "std": 707.6,
+          "min": 8498.2,
+          "max": 10460.8
+        },
+        "latP99": {
+          "mean": 48.6,
+          "std": 3.3,
+          "min": 44,
+          "max": 53
+        },
+        "serverCPU": {
+          "mean": 42.6,
+          "std": 2.6
+        },
+        "serverMemPct": {
+          "mean": 1,
+          "std": 0
+        },
+        "runs": 5
+      },
+      "GET Text (100c, 10s)": {
+        "rps": {
+          "mean": 9676.5,
+          "std": 604,
+          "min": 8947.2,
+          "max": 10722.4
+        },
+        "latP99": {
+          "mean": 48,
+          "std": 2.6,
+          "min": 44,
+          "max": 51
+        },
+        "serverCPU": {
+          "mean": 41.2,
+          "std": 2.7
+        },
+        "serverMemPct": {
+          "mean": 1,
+          "std": 0
+        },
+        "runs": 5
+      },
+      "POST Echo (100c, 10s)": {
+        "rps": {
+          "mean": 8115.4,
+          "std": 539.8,
+          "min": 7335,
+          "max": 9009
+        },
+        "latP99": {
+          "mean": 50,
+          "std": 3.3,
+          "min": 46,
+          "max": 56
+        },
+        "serverCPU": {
+          "mean": 41.2,
+          "std": 2.3
+        },
+        "serverMemPct": {
+          "mean": 1.2,
+          "std": 0
+        },
+        "runs": 5
+      },
+      "GET Headers (100c, 10s)": {
+        "rps": {
+          "mean": 9602.8,
+          "std": 812.7,
+          "min": 8666.2,
+          "max": 10581.6
+        },
+        "latP99": {
+          "mean": 48.8,
+          "std": 3.2,
+          "min": 45,
+          "max": 53
+        },
+        "serverCPU": {
+          "mean": 41.1,
+          "std": 1.7
+        },
+        "serverMemPct": {
+          "mean": 1.2,
+          "std": 0
+        },
+        "runs": 5
+      },
+      "GET JSON (10c, 10s)": {
+        "rps": {
+          "mean": 7894.5,
+          "std": 743.9,
+          "min": 7054.8,
+          "max": 8788.2
+        },
+        "latP99": {
+          "mean": 25,
+          "std": 1.4,
+          "min": 23,
+          "max": 27
+        },
+        "serverCPU": {
+          "mean": 39.9,
+          "std": 1.5
+        },
+        "serverMemPct": {
+          "mean": 1.2,
+          "std": 0
+        },
+        "runs": 5
+      },
+      "GET JSON (500c, 10s)": {
+        "rps": {
+          "mean": 10666.7,
+          "std": 382.3,
+          "min": 10224,
+          "max": 11266.4
+        },
+        "latP99": {
+          "mean": 108.6,
+          "std": 6.8,
+          "min": 97,
+          "max": 116
+        },
+        "serverCPU": {
+          "mean": 39.2,
+          "std": 1.4
+        },
+        "serverMemPct": {
+          "mean": 1.2,
+          "std": 0
+        },
+        "runs": 5
+      },
+      "Pipeline 10x10 (10s)": {
+        "rps": {
+          "mean": 15510,
+          "std": 1061.9,
+          "min": 14427.6,
+          "max": 17094.4
+        },
+        "latP99": {
+          "mean": 38.6,
+          "std": 0.8,
+          "min": 38,
+          "max": 40
+        },
+        "serverCPU": {
+          "mean": 39.7,
+          "std": 1.1
+        },
+        "serverMemPct": {
+          "mean": 1.3,
+          "std": 0
+        },
+        "runs": 5
+      }
+    },
+    "Express": {
+      "GET JSON (100c, 10s)": {
+        "rps": {
+          "mean": 3100.6,
+          "std": 163.6,
+          "min": 2917.6,
+          "max": 3408.8
+        },
+        "latP99": {
+          "mean": 75.8,
+          "std": 6.8,
+          "min": 65,
+          "max": 86
+        },
+        "serverCPU": {
+          "mean": 61.4,
+          "std": 3.1
+        },
+        "serverMemPct": {
+          "mean": 1.6,
+          "std": 0
+        },
+        "runs": 5
+      },
+      "GET Route Params (100c, 10s)": {
+        "rps": {
+          "mean": 3053.2,
+          "std": 132.2,
+          "min": 2912,
+          "max": 3241.8
+        },
+        "latP99": {
+          "mean": 77,
+          "std": 4,
+          "min": 70,
+          "max": 81
+        },
+        "serverCPU": {
+          "mean": 58.4,
+          "std": 2.8
+        },
+        "serverMemPct": {
+          "mean": 1.6,
+          "std": 0
+        },
+        "runs": 5
+      },
+      "GET Text (100c, 10s)": {
+        "rps": {
+          "mean": 3158.7,
+          "std": 191.7,
+          "min": 2884.8,
+          "max": 3425.6
+        },
+        "latP99": {
+          "mean": 74.8,
+          "std": 6.3,
+          "min": 67,
+          "max": 86
+        },
+        "serverCPU": {
+          "mean": 57.5,
+          "std": 2.1
+        },
+        "serverMemPct": {
+          "mean": 1.6,
+          "std": 0
+        },
+        "runs": 5
+      },
+      "POST Echo (100c, 10s)": {
+        "rps": {
+          "mean": 2531.5,
+          "std": 136.8,
+          "min": 2336,
+          "max": 2709.9
+        },
+        "latP99": {
+          "mean": 92,
+          "std": 3.5,
+          "min": 88,
+          "max": 97
+        },
+        "serverCPU": {
+          "mean": 57.7,
+          "std": 1.8
+        },
+        "serverMemPct": {
+          "mean": 1.6,
+          "std": 0
+        },
+        "runs": 5
+      },
+      "GET Headers (100c, 10s)": {
+        "rps": {
+          "mean": 3047.3,
+          "std": 230.9,
+          "min": 2655.2,
+          "max": 3282
+        },
+        "latP99": {
+          "mean": 75,
+          "std": 7.6,
+          "min": 67,
+          "max": 89
+        },
+        "serverCPU": {
+          "mean": 57.8,
+          "std": 1.8
+        },
+        "serverMemPct": {
+          "mean": 1.6,
+          "std": 0
+        },
+        "runs": 5
+      },
+      "GET JSON (10c, 10s)": {
+        "rps": {
+          "mean": 2406.6,
+          "std": 88.2,
+          "min": 2305.2,
+          "max": 2541.4
+        },
+        "latP99": {
+          "mean": 35.2,
+          "std": 1.2,
+          "min": 34,
+          "max": 37
+        },
+        "serverCPU": {
+          "mean": 56.5,
+          "std": 1.9
+        },
+        "serverMemPct": {
+          "mean": 1.6,
+          "std": 0
+        },
+        "runs": 5
+      },
+      "GET JSON (500c, 10s)": {
+        "rps": {
+          "mean": 3226,
+          "std": 164.7,
+          "min": 3095.6,
+          "max": 3548.4
+        },
+        "latP99": {
+          "mean": 293.6,
+          "std": 25.4,
+          "min": 253,
+          "max": 323
+        },
+        "serverCPU": {
+          "mean": 55.5,
+          "std": 1.4
+        },
+        "serverMemPct": {
+          "mean": 1.6,
+          "std": 0
+        },
+        "runs": 5
+      },
+      "Pipeline 10x10 (10s)": {
+        "rps": {
+          "mean": 3649.4,
+          "std": 279,
+          "min": 3217.3,
+          "max": 4053.6
+        },
+        "latP99": {
+          "mean": 74,
+          "std": 9.1,
+          "min": 64,
+          "max": 91
+        },
+        "serverCPU": {
+          "mean": 55.7,
+          "std": 1
+        },
+        "serverMemPct": {
+          "mean": 1.6,
+          "std": 0
+        },
+        "runs": 5
+      }
+    },
+    "Fastify": {
+      "GET JSON (100c, 10s)": {
+        "rps": {
+          "mean": 10361.4,
+          "std": 1000.1,
+          "min": 9443,
+          "max": 11979.8
+        },
+        "latP99": {
+          "mean": 48.8,
+          "std": 3.1,
+          "min": 44,
+          "max": 53
+        },
+        "serverCPU": {
+          "mean": 44.6,
+          "std": 1.4
+        },
+        "serverMemPct": {
+          "mean": 1,
+          "std": 0
+        },
+        "runs": 5
+      },
+      "GET Route Params (100c, 10s)": {
+        "rps": {
+          "mean": 10409,
+          "std": 1154.8,
+          "min": 9077.2,
+          "max": 11921.6
+        },
+        "latP99": {
+          "mean": 47.2,
+          "std": 4.4,
+          "min": 43,
+          "max": 53
+        },
+        "serverCPU": {
+          "mean": 40.8,
+          "std": 2.4
+        },
+        "serverMemPct": {
+          "mean": 1,
+          "std": 0
+        },
+        "runs": 5
+      },
+      "GET Text (100c, 10s)": {
+        "rps": {
+          "mean": 10968.4,
+          "std": 932.3,
+          "min": 9333.4,
+          "max": 11984
+        },
+        "latP99": {
+          "mean": 44.4,
+          "std": 2.2,
+          "min": 41,
+          "max": 48
+        },
+        "serverCPU": {
+          "mean": 40.3,
+          "std": 2.4
+        },
+        "serverMemPct": {
+          "mean": 1,
+          "std": 0
+        },
+        "runs": 5
+      },
+      "POST Echo (100c, 10s)": {
+        "rps": {
+          "mean": 6134.3,
+          "std": 560.8,
+          "min": 5090.9,
+          "max": 6683.6
+        },
+        "latP99": {
+          "mean": 58.6,
+          "std": 6.3,
+          "min": 52,
+          "max": 70
+        },
+        "serverCPU": {
+          "mean": 41.7,
+          "std": 2.3
+        },
+        "serverMemPct": {
+          "mean": 1.6,
+          "std": 0
+        },
+        "runs": 5
+      },
+      "GET Headers (100c, 10s)": {
+        "rps": {
+          "mean": 9467.1,
+          "std": 542.7,
+          "min": 8548.2,
+          "max": 10252.8
+        },
+        "latP99": {
+          "mean": 48.4,
+          "std": 2.3,
+          "min": 45,
+          "max": 52
+        },
+        "serverCPU": {
+          "mean": 42.2,
+          "std": 2.4
+        },
+        "serverMemPct": {
+          "mean": 1.7,
+          "std": 0
+        },
+        "runs": 5
+      },
+      "GET JSON (10c, 10s)": {
+        "rps": {
+          "mean": 7834.6,
+          "std": 550,
+          "min": 7129,
+          "max": 8444.6
+        },
+        "latP99": {
+          "mean": 25.6,
+          "std": 1.6,
+          "min": 24,
+          "max": 28
+        },
+        "serverCPU": {
+          "mean": 40.6,
+          "std": 2.2
+        },
+        "serverMemPct": {
+          "mean": 1.7,
+          "std": 0
+        },
+        "runs": 5
+      },
+      "GET JSON (500c, 10s)": {
+        "rps": {
+          "mean": 11447,
+          "std": 805.7,
+          "min": 10728.8,
+          "max": 12684.8
+        },
+        "latP99": {
+          "mean": 100.2,
+          "std": 4.3,
+          "min": 95,
+          "max": 104
+        },
+        "serverCPU": {
+          "mean": 39.9,
+          "std": 1.6
+        },
+        "serverMemPct": {
+          "mean": 1.7,
+          "std": 0
+        },
+        "runs": 5
+      },
+      "Pipeline 10x10 (10s)": {
+        "rps": {
+          "mean": 14626.2,
+          "std": 1189.3,
+          "min": 13025.6,
+          "max": 16041.1
+        },
+        "latP99": {
+          "mean": 39.8,
+          "std": 3,
+          "min": 36,
+          "max": 44
+        },
+        "serverCPU": {
+          "mean": 40.3,
+          "std": 1.2
+        },
+        "serverMemPct": {
+          "mean": 1.7,
+          "std": 0
+        },
+        "runs": 5
+      }
+    },
+    "Koa": {
+      "GET JSON (100c, 10s)": {
+        "rps": {
+          "mean": 6648.3,
+          "std": 359.7,
+          "min": 6042,
+          "max": 7039.2
+        },
+        "latP99": {
+          "mean": 51.6,
+          "std": 1.9,
+          "min": 49,
+          "max": 54
+        },
+        "serverCPU": {
+          "mean": 55.3,
+          "std": 2
+        },
+        "serverMemPct": {
+          "mean": 1,
+          "std": 0
+        },
+        "runs": 5
+      },
+      "GET Route Params (100c, 10s)": {
+        "rps": {
+          "mean": 6364.2,
+          "std": 125.1,
+          "min": 6213.6,
+          "max": 6577.6
+        },
+        "latP99": {
+          "mean": 53.6,
+          "std": 1.4,
+          "min": 52,
+          "max": 56
+        },
+        "serverCPU": {
+          "mean": 48.8,
+          "std": 1.7
+        },
+        "serverMemPct": {
+          "mean": 1.1,
+          "std": 0
+        },
+        "runs": 5
+      },
+      "GET Text (100c, 10s)": {
+        "rps": {
+          "mean": 6582.6,
+          "std": 237.3,
+          "min": 6328.8,
+          "max": 6974.8
+        },
+        "latP99": {
+          "mean": 53,
+          "std": 1.8,
+          "min": 51,
+          "max": 55
+        },
+        "serverCPU": {
+          "mean": 46.4,
+          "std": 1.7
+        },
+        "serverMemPct": {
+          "mean": 1.2,
+          "std": 0
+        },
+        "runs": 5
+      },
+      "POST Echo (100c, 10s)": {
+        "rps": {
+          "mean": 5209.5,
+          "std": 169.3,
+          "min": 4988.1,
+          "max": 5412.8
+        },
+        "latP99": {
+          "mean": 60.6,
+          "std": 3.6,
+          "min": 57,
+          "max": 67
+        },
+        "serverCPU": {
+          "mean": 45.5,
+          "std": 1.5
+        },
+        "serverMemPct": {
+          "mean": 1.2,
+          "std": 0
+        },
+        "runs": 5
+      },
+      "GET Headers (100c, 10s)": {
+        "rps": {
+          "mean": 5961,
+          "std": 212.1,
+          "min": 5676.4,
+          "max": 6232.8
+        },
+        "latP99": {
+          "mean": 56.4,
+          "std": 2.2,
+          "min": 54,
+          "max": 60
+        },
+        "serverCPU": {
+          "mean": 44.8,
+          "std": 1
+        },
+        "serverMemPct": {
+          "mean": 1.2,
+          "std": 0
+        },
+        "runs": 5
+      },
+      "GET JSON (10c, 10s)": {
+        "rps": {
+          "mean": 4669.5,
+          "std": 477.5,
+          "min": 4334.3,
+          "max": 5616.8
+        },
+        "latP99": {
+          "mean": 30.6,
+          "std": 1.4,
+          "min": 28,
+          "max": 32
+        },
+        "serverCPU": {
+          "mean": 43.5,
+          "std": 0.6
+        },
+        "serverMemPct": {
+          "mean": 1.2,
+          "std": 0
+        },
+        "runs": 5
+      },
+      "GET JSON (500c, 10s)": {
+        "rps": {
+          "mean": 7686.2,
+          "std": 388.7,
+          "min": 7243.6,
+          "max": 8405.8
+        },
+        "latP99": {
+          "mean": 140.2,
+          "std": 9.9,
+          "min": 122,
+          "max": 152
+        },
+        "serverCPU": {
+          "mean": 43.1,
+          "std": 0.6
+        },
+        "serverMemPct": {
+          "mean": 1.3,
+          "std": 0
+        },
+        "runs": 5
+      },
+      "Pipeline 10x10 (10s)": {
+        "rps": {
+          "mean": 9376.4,
+          "std": 415.6,
+          "min": 8982.4,
+          "max": 10004.8
+        },
+        "latP99": {
+          "mean": 47.6,
+          "std": 2.4,
+          "min": 43,
+          "max": 50
+        },
+        "serverCPU": {
+          "mean": 43.5,
+          "std": 0.7
+        },
+        "serverMemPct": {
+          "mean": 1.3,
+          "std": 0
+        },
+        "runs": 5
+      }
+    },
+    "Hono": {
+      "GET JSON (100c, 10s)": {
+        "rps": {
+          "mean": 8985.3,
+          "std": 863.4,
+          "min": 7759,
+          "max": 10420
+        },
+        "latP99": {
+          "mean": 49.8,
+          "std": 4,
+          "min": 45,
+          "max": 57
+        },
+        "serverCPU": {
+          "mean": 47,
+          "std": 2.8
+        },
+        "serverMemPct": {
+          "mean": 0.9,
+          "std": 0
+        },
+        "runs": 5
+      },
+      "GET Route Params (100c, 10s)": {
+        "rps": {
+          "mean": 9329.7,
+          "std": 593.5,
+          "min": 8197.8,
+          "max": 9755.8
+        },
+        "latP99": {
+          "mean": 49.4,
+          "std": 2,
+          "min": 47,
+          "max": 53
+        },
+        "serverCPU": {
+          "mean": 41.6,
+          "std": 2.6
+        },
+        "serverMemPct": {
+          "mean": 1,
+          "std": 0
+        },
+        "runs": 5
+      },
+      "GET Text (100c, 10s)": {
+        "rps": {
+          "mean": 11195.3,
+          "std": 685.1,
+          "min": 10193.4,
+          "max": 11984.8
+        },
+        "latP99": {
+          "mean": 44.4,
+          "std": 2.9,
+          "min": 41,
+          "max": 49
+        },
+        "serverCPU": {
+          "mean": 41.2,
+          "std": 2.2
+        },
+        "serverMemPct": {
+          "mean": 1.1,
+          "std": 0.1
+        },
+        "runs": 5
+      },
+      "POST Echo (100c, 10s)": {
+        "rps": {
+          "mean": 7237,
+          "std": 372.8,
+          "min": 6844,
+          "max": 7909.8
+        },
+        "latP99": {
+          "mean": 51.4,
+          "std": 2.9,
+          "min": 47,
+          "max": 55
+        },
+        "serverCPU": {
+          "mean": 42.1,
+          "std": 1.6
+        },
+        "serverMemPct": {
+          "mean": 1.2,
+          "std": 0
+        },
+        "runs": 5
+      },
+      "GET Headers (100c, 10s)": {
+        "rps": {
+          "mean": 8026.4,
+          "std": 390.3,
+          "min": 7550.6,
+          "max": 8683.4
+        },
+        "latP99": {
+          "mean": 49.6,
+          "std": 2.1,
+          "min": 46,
+          "max": 52
+        },
+        "serverCPU": {
+          "mean": 42.5,
+          "std": 1
+        },
+        "serverMemPct": {
+          "mean": 1.2,
+          "std": 0
+        },
+        "runs": 5
+      },
+      "GET JSON (10c, 10s)": {
+        "rps": {
+          "mean": 7141.2,
+          "std": 426.3,
+          "min": 6616,
+          "max": 7850.6
+        },
+        "latP99": {
+          "mean": 25.8,
+          "std": 1.2,
+          "min": 24,
+          "max": 27
+        },
+        "serverCPU": {
+          "mean": 41.4,
+          "std": 0.8
+        },
+        "serverMemPct": {
+          "mean": 1.2,
+          "std": 0
+        },
+        "runs": 5
+      },
+      "GET JSON (500c, 10s)": {
+        "rps": {
+          "mean": 10555.8,
+          "std": 462.4,
+          "min": 9777.6,
+          "max": 11145.6
+        },
+        "latP99": {
+          "mean": 108.8,
+          "std": 4.9,
+          "min": 104,
+          "max": 118
+        },
+        "serverCPU": {
+          "mean": 40.7,
+          "std": 0.7
+        },
+        "serverMemPct": {
+          "mean": 1.2,
+          "std": 0
+        },
+        "runs": 5
+      },
+      "Pipeline 10x10 (10s)": {
+        "rps": {
+          "mean": 12828.6,
+          "std": 626.8,
+          "min": 12099.2,
+          "max": 13990.4
+        },
+        "latP99": {
+          "mean": 41.4,
+          "std": 1,
+          "min": 40,
+          "max": 43
+        },
+        "serverCPU": {
+          "mean": 41,
+          "std": 0.6
+        },
+        "serverMemPct": {
+          "mean": 1.2,
+          "std": 0
+        },
+        "runs": 5
+      }
+    }
+  },
+  "errors": []
+}
