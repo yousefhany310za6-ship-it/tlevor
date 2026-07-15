@@ -125,18 +125,38 @@ describe('CacheManager', () => {
 });
 
 describe('cacheMiddleware', () => {
-  it('should cache GET responses', async () => {
-    const cache = new MemoryCache({ ttl: 60000 });
-    const middleware = cacheMiddleware(cache, { ttl: 60000 });
-    let callCount = 0;
-    const ctx = {
+  // Simulates a request through the middleware + core's return-value write path.
+  const runRequest = async (cache: MemoryCache, middleware: any) => {
+    const captured: any = { body: undefined };
+    const ctx: any = {
       req: { method: 'GET', url: '/test' },
       res: {
-        json: (data: any) => { ctx['result'] = data; },
+        headersSent: false,
+        raw: {
+          statusCode: 200,
+          _headers: {} as Record<string, any>,
+          setHeader(n: string, v: any) { this._headers[n.toLowerCase()] = v; },
+          getHeader(n: string) { return this._headers[n.toLowerCase()]; },
+          end(chunk: any) { captured.body = chunk; },
+        },
+        json: (d: any) => { captured.body = JSON.stringify(d); },
       },
     };
     await middleware(ctx);
-    expect(ctx.res.json).toBeDefined();
+    // core would serialize a returned value via raw.end
+    if (!ctx.res.headersSent) ctx.res.raw.end(JSON.stringify({ hello: 'world' }));
+    return captured.body;
+  };
+
+  it('should cache GET responses (return-value style)', async () => {
+    const cache = new MemoryCache({ ttl: 60000 });
+    const middleware = cacheMiddleware(cache, { ttl: 60000 });
+
+    const first = await runRequest(cache, middleware);
+    expect(first).toBe(JSON.stringify({ hello: 'world' }));
+
+    const second = await runRequest(cache, middleware);
+    expect(second).toBe(JSON.stringify({ hello: 'world' }));
   });
 
   it('should skip non-GET methods', async () => {

@@ -187,7 +187,7 @@ describe('Integration: Cache', () => {
     app.addHook('preHandler', cacheMiddleware(cache, { ttl: 1000 }));
     let calls = 0;
     // cacheMiddleware caches by intercepting ctx.res.json(), so the handler must write via res.json()
-    app.addRoute({ method: 'GET', path: '/data', handler: async (ctx) => { calls++; ctx.res.json({ n: calls }); } });
+    app.addRoute({ method: 'GET', path: '/data', handler: async () => { calls++; return { n: calls }; } });
 
     const r1 = await app.inject({ method: 'GET', url: '/data' });
     const r2 = await app.inject({ method: 'GET', url: '/data' });
@@ -393,7 +393,7 @@ describe('Integration: Combined (auth + cache + validation + monitoring + tracin
 
     let publicCalls = 0;
     app.addRoute({ method: 'POST', path: '/login', handler: async () => ({ token: auth.getJwt().sign({ sub: 'u1' }) }) });
-    app.addRoute({ method: 'GET', path: '/public', handler: async (ctx) => { publicCalls++; ctx.res.json({ ok: true }); } });
+    app.addRoute({ method: 'GET', path: '/public', handler: async () => { publicCalls++; return { ok: true }; } });
     app.addRoute({ method: 'GET', path: '/me', handler: async (ctx) => ({ id: (ctx.state as any).user.id }) });
 
     // Public + cached: handler must run only once across two calls

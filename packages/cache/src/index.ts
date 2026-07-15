@@ -235,10 +235,51 @@ export function cacheMiddleware(cache: CacheAdapter, options: CacheMiddlewareOpt
     if (condition && !condition(ctx)) return;
     if (ctx.req.method !== 'GET') return;
     const key = keyGenerator ? keyGenerator(ctx) : `${ctx.req.method}:${ctx.req.url}`;
+
+    // Cache HIT: replay the stored response and short-circuit the chain.
     const cached = await cache.get(key);
-    if (cached !== null) { ctx.res.json(cached); return false; }
-    const originalJson = ctx.res.json.bind(ctx.res);
-    ctx.res.json = (data: any) => { cache.set(key, data, ttl); originalJson(data); };
+    if (cached !== null && cached !== undefined) {
+      const raw = ctx.res.raw;
+      if (raw && typeof raw.end === 'function') {
+        if (cached.contentType) raw.setHeader('Content-Type', cached.contentType);
+        raw.end(cached.body);
+      } else if (typeof ctx.res.json === 'function') {
+        // Minimal mock without a raw response object: best-effort replay.
+        if (cached.contentType && cached.contentType.includes('application/json')) {
+          try { ctx.res.json(JSON.parse(cached.body)); return false; } catch {}
+        }
+        ctx.res.json(cached.body);
+      }
+      ctx.res.headersSent = true;
+      return false;
+    }
+
+    // Cache MISS: intercept the underlying response write so the body is captured
+    // regardless of style — whether the handler returns a value (core serializes
+    // it via res.end) or calls res.json/send/text explicitly.
+    const raw = ctx.res.raw;
+    if (raw && typeof raw.end === 'function') {
+      const originalEnd = raw.end.bind(raw);
+      raw.end = (chunk: any, ...rest: any[]) => {
+        const contentType = typeof raw.getHeader === 'function' ? raw.getHeader('content-type') : undefined;
+        Promise.resolve(cache.set(key, { body: chunk, contentType }, ttl)).catch(() => {});
+        return originalEnd(chunk, ...rest);
+      };
+    } else {
+      // Fallback for environments without a raw response object: wrap the
+      // high-level writer methods (explicit-write style only).
+      for (const method of ['json', 'send', 'text']) {
+        if (typeof ctx.res[method] === 'function') {
+          const original = ctx.res[method].bind(ctx.res);
+          (ctx.res as any)[method] = (data: any) => {
+            const body = typeof data === 'string' ? data : JSON.stringify(data);
+            const contentType = method === 'json' ? 'application/json' : 'text/plain';
+            Promise.resolve(cache.set(key, { body, contentType }, ttl)).catch(() => {});
+            return original(data);
+          };
+        }
+      }
+    }
   };
 }
 
