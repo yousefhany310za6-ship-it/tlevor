@@ -30,10 +30,32 @@ function createNode(path: string = ''): RouteNode {
   };
 }
 
+function getSegments(path: string): string[] {
+  const segments: string[] = [];
+  const len = path.length;
+  if (len === 0) return segments;
+  let start = path.charCodeAt(0) === 47 ? 1 : 0; // skip leading slash
+  let i = start;
+  while (i < len) {
+    if (path.charCodeAt(i) === 47) {
+      if (i > start) {
+        segments.push(path.slice(start, i));
+      }
+      start = i + 1;
+    }
+    i++;
+  }
+  if (i > start) {
+    segments.push(path.slice(start, i));
+  }
+  return segments;
+}
+
 export class Router {
   private root: RouteNode;
   private routeCount: number = 0;
   private staticRoutes: Map<string, Map<HTTPMethod, RouteHandler>> = new Map();
+  private pathCache: Map<string, string> = new Map();
 
   constructor() {
     this.root = createNode('/');
@@ -53,7 +75,7 @@ export class Router {
     }
 
     let current = this.root;
-    const segments = normalizedPath.split('/').filter(Boolean);
+    const segments = getSegments(normalizedPath);
 
     for (let i = 0; i < segments.length; i++) {
       const segment = segments[i];
@@ -88,9 +110,9 @@ export class Router {
 
   findRoute(method: HTTPMethod, path: string): MatchResult | null {
     const normalizedPath = this.normalizePath(path);
-    const segments = normalizedPath.split('/').filter(Boolean);
+    const segments = getSegments(normalizedPath);
 
-    const result = this.matchNode(this.root, segments, 0, {});
+    const result = this.matchNode(this.root, segments, 0, [], []);
     if (!result) {
       return null;
     }
@@ -102,13 +124,18 @@ export class Router {
     node: RouteNode,
     segments: string[],
     index: number,
-    params: Record<string, string>
+    paramNames: string[],
+    paramValues: string[]
   ): MatchResult | null {
     if (index === segments.length) {
       // Check if this node has a handler for any method
       if (node.methods.size > 0) {
         // Return the first available handler (will be filtered by method later)
         for (const [method, handler] of node.handlers) {
+          const params: Record<string, string> = {};
+          for (let i = 0; i < paramNames.length; i++) {
+            params[paramNames[i]] = paramValues[i];
+          }
           return { handler, method, params };
         }
       }
@@ -120,24 +147,33 @@ export class Router {
     // Try exact match first
     const exactChild = node.children.get(segment);
     if (exactChild) {
-      const result = this.matchNode(exactChild, segments, index + 1, params);
+      const result = this.matchNode(exactChild, segments, index + 1, paramNames, paramValues);
       if (result) return result;
     }
 
     // Try parameter match
     if (node.paramChild) {
       const paramName = node.paramChild.paramName!;
-      const newParams = { ...params, [paramName]: segment };
-      const result = this.matchNode(node.paramChild, segments, index + 1, newParams);
+      const backtrackIndex = paramNames.length;
+      paramNames.push(paramName);
+      paramValues.push(segment);
+      const result = this.matchNode(node.paramChild, segments, index + 1, paramNames, paramValues);
       if (result) return result;
+      // Backtrack
+      paramNames.length = backtrackIndex;
+      paramValues.length = backtrackIndex;
     }
 
     // Try wildcard match
     if (node.wildcardChild) {
       const wildcardPath = segments.slice(index).join('/');
-      const newParams = { ...params, '*': wildcardPath };
+      const params: Record<string, string> = {};
+      for (let i = 0; i < paramNames.length; i++) {
+        params[paramNames[i]] = paramValues[i];
+      }
+      params['*'] = wildcardPath;
       for (const [method, handler] of node.wildcardChild.handlers) {
-        return { handler, method, params: newParams };
+        return { handler, method, params };
       }
     }
 
@@ -153,19 +189,24 @@ export class Router {
       return { handler: staticHandlers.get(method)!, method, params: {} };
     }
 
-    const segments = normalizedPath.split('/').filter(Boolean);
-    return this.matchNodeByMethod(this.root, segments, 0, {}, method);
+    const segments = getSegments(normalizedPath);
+    return this.matchNodeByMethod(this.root, segments, 0, [], [], method);
   }
 
   private matchNodeByMethod(
     node: RouteNode,
     segments: string[],
     index: number,
-    params: Record<string, string>,
+    paramNames: string[],
+    paramValues: string[],
     method: HTTPMethod
   ): MatchResult | null {
     if (index === segments.length) {
       if (node.handlers.has(method)) {
+        const params: Record<string, string> = {};
+        for (let i = 0; i < paramNames.length; i++) {
+          params[paramNames[i]] = paramValues[i];
+        }
         return { handler: node.handlers.get(method)!, method, params };
       }
       return null;
@@ -175,22 +216,31 @@ export class Router {
 
     const exactChild = node.children.get(segment);
     if (exactChild) {
-      const result = this.matchNodeByMethod(exactChild, segments, index + 1, params, method);
+      const result = this.matchNodeByMethod(exactChild, segments, index + 1, paramNames, paramValues, method);
       if (result) return result;
     }
 
     if (node.paramChild) {
       const paramName = node.paramChild.paramName!;
-      const newParams = { ...params, [paramName]: segment };
-      const result = this.matchNodeByMethod(node.paramChild, segments, index + 1, newParams, method);
+      const backtrackIndex = paramNames.length;
+      paramNames.push(paramName);
+      paramValues.push(segment);
+      const result = this.matchNodeByMethod(node.paramChild, segments, index + 1, paramNames, paramValues, method);
       if (result) return result;
+      // Backtrack
+      paramNames.length = backtrackIndex;
+      paramValues.length = backtrackIndex;
     }
 
     if (node.wildcardChild) {
       const wildcardPath = segments.slice(index).join('/');
-      const newParams = { ...params, '*': wildcardPath };
+      const params: Record<string, string> = {};
+      for (let i = 0; i < paramNames.length; i++) {
+        params[paramNames[i]] = paramValues[i];
+      }
+      params['*'] = wildcardPath;
       if (node.wildcardChild.handlers.has(method)) {
-        return { handler: node.wildcardChild.handlers.get(method)!, method, params: newParams };
+        return { handler: node.wildcardChild.handlers.get(method)!, method, params };
       }
     }
 
@@ -198,8 +248,20 @@ export class Router {
   }
 
   private normalizePath(path: string): string {
-    if (path === '/') return '/';
-    return path.endsWith('/') ? path.slice(0, -1) : path;
+    const cached = this.pathCache.get(path);
+    if (cached !== undefined) return cached;
+
+    let normalized: string;
+    if (path === '/') {
+      normalized = '/';
+    } else {
+      normalized = path.endsWith('/') ? path.slice(0, -1) : path;
+    }
+
+    if (this.pathCache.size < 1000) {
+      this.pathCache.set(path, normalized);
+    }
+    return normalized;
   }
 
   getRouteCount(): number {

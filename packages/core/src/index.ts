@@ -245,7 +245,7 @@ function serialize(data: any, schema?: ValidationSchema): any {
 
 class TlevorRequestImpl<Body = any, Query = any, Params = any> implements TlevorRequest<Body, Query, Params> {
   raw: IncomingMessage; method: HTTPMethod; url: string; path: string; headers: IncomingMessage['headers'];
-  params: Params; body: Body; ip: string;
+  params: Params; body: Body;
   private _query: Query | undefined;
   private _cookies: Record<string, string> | undefined;
   private _parsedCookies: boolean = false;
@@ -254,8 +254,9 @@ class TlevorRequestImpl<Body = any, Query = any, Params = any> implements Tlevor
   constructor(raw: IncomingMessage, url: string, path: string, params: Params, query: Query) {
     this.raw = raw; this.method = raw.method as HTTPMethod; this.url = url; this.path = path;
     this.headers = raw.headers; this.params = params; this._query = query; this.body = {} as Body;
-    this.ip = raw.socket.remoteAddress || '127.0.0.1';
   }
+
+  get ip(): string { return this.raw.socket.remoteAddress || '127.0.0.1'; }
 
   get query(): Query {
     if (!this._parsedQuery) { this._parsedQuery = true; if (!this._query) this._query = parseQuery(this.url) as Query; }
@@ -310,6 +311,10 @@ function parseQuery(url: string): Record<string, string> {
   return query;
 }
 
+// ==================== Body Method Check ====================
+
+const BODY_METHODS = new Set(['POST', 'PUT', 'PATCH']);
+
 // ==================== App ====================
 
 export interface TlevorAppOptions {
@@ -336,7 +341,7 @@ export class TlevorApp {
   private bodyParserOptions: BodyParserOptions | false;
   private securityHeaders: boolean;
   private rateLimiter: RateLimiter | null = null;
-  private routeSchemas: Map<string, any> = new Map();
+  private routeSchemas: Map<any, any> = new Map();
   private wsHandlers: Map<string, IWebSocketHandler> = new Map();
   private wss: WebSocketServer | null = null;
   private wsConnections: Map<string, WebSocketConnectionImpl> = new Map();
@@ -354,7 +359,7 @@ export class TlevorApp {
   addRoute(options: RouteConfig): void {
     const { method, path, handler, schema } = options;
     this.router.addRoute(method, path, handler);
-    if (schema) this.routeSchemas.set(`${Array.isArray(method) ? method.join(',') : method}:${path}`, schema);
+    if (schema) this.routeSchemas.set(handler, schema);
   }
 
   addHook(name: HookName, handler: HookHandler): void {
@@ -380,16 +385,16 @@ export class TlevorApp {
         on: (event: string, cb: any) => { if (event === 'data' && bodyStr) setTimeout(() => cb(Buffer.from(bodyStr)), 0); if (event === 'end') setTimeout(() => cb(), bodyStr ? 10 : 0); },
         once: () => {}, emit: () => {}, removeListener: () => {}, destroy: () => {},
       } as unknown as IncomingMessage;
+      let finished = false;
+      const finish = (data: { statusCode: number; headers: Record<string, string>; body: string }) => { if (!finished) { finished = true; resolve({ ...data, json: <T = any>() => { try { return JSON.parse(data.body) as T; } catch { return data.body as T; } } }); } };
       const mockRes = new (class extends (Object as any) {
         statusCode = 200; headers: Record<string, string> = {}; body = ''; headersSent = false;
         setHeader(name: string, value: string) { this.headers[name.toLowerCase()] = value; }
         getHeader(name: string) { return this.headers[name.toLowerCase()]; }
-        end(data?: string) { if (data) this.body = data; }
+        end(data?: string) { if (data) this.body = data; finish({ statusCode: this.statusCode, headers: this.headers, body: this.body }); }
         writeHead(code: number, headers?: Record<string, string>) { this.statusCode = code; if (headers) for (const [k, v] of Object.entries(headers)) this.headers[k.toLowerCase()] = v; }
       })();
-      this.handleRequest(mockReq as IncomingMessage, mockRes as any).then(() => {
-        resolve({ statusCode: mockRes.statusCode, headers: mockRes.headers, body: mockRes.body, json: <T = any>() => { try { return JSON.parse(mockRes.body) as T; } catch { return mockRes.body as T; } } });
-      });
+      this.handleRequest(mockReq as IncomingMessage, mockRes as any);
     });
   }
 
@@ -432,7 +437,7 @@ export class TlevorApp {
 
   getServer() { return this.server; }
 
-  private async handleRequest(req: IncomingMessage, res: ServerResponse): Promise<void> {
+  private handleRequest(req: IncomingMessage, res: ServerResponse): void {
     const url = req.url || '/'; const path = url.split('?')[0]; const method = (req.method || 'GET') as HTTPMethod;
 
     if (this.corsOptions && method === 'OPTIONS') { const origin = req.headers['origin']; res.writeHead(204, getCorsHeaders(this.corsOptions, origin)); res.end(); return; }
@@ -454,42 +459,114 @@ export class TlevorApp {
     const ctx: TlevorContext = { req: new TlevorRequestImpl(req, url, path, match.params, undefined) as any, res: new TlevorResponseImpl(res), state: {}, logger: this.logger };
 
     try {
-      if (this.bodyParserOptions && ['POST', 'PUT', 'PATCH'].includes(method)) {
-        try { (ctx.req as any).body = await parseBody(req, this.bodyParserOptions); } catch (error) {
-          if (error instanceof TlevorError) { ctx.res.status(error.statusCode).json({ error: error.message, code: error.code, statusCode: error.statusCode }); return; }
-          throw error;
+      if (this.bodyParserOptions && BODY_METHODS.has(method)) {
+        const bodyPromise = parseBody(req, this.bodyParserOptions);
+        if (bodyPromise != null && typeof (bodyPromise as any).then === 'function') {
+          (bodyPromise as any).then(
+            (body: any) => { (ctx.req as any).body = body; this._dispatchHandler(ctx, res, match); },
+            (error: any) => {
+              if (error instanceof TlevorError) { ctx.res.status(error.statusCode).json({ error: error.message, code: error.code, statusCode: error.statusCode }); return; }
+              this.handleError(error, ctx);
+            }
+          );
+          return;
         }
       }
 
-      const schemaKey = `${method}:${path}`;
-      const schema = this.routeSchemas.get(schemaKey);
+      this._dispatchHandler(ctx, res, match);
+    } catch (error) { this.handleError(error, ctx); }
+  }
 
+  private _dispatchHandler(ctx: TlevorContext, res: ServerResponse, match: { handler: HookHandler; method: HTTPMethod; params: Record<string, string> }): void {
+    try {
       const onReq = this.hooks.onRequest;
       const preP = this.hooks.preParsing;
-      const preV = this.hooks.preValidation;
-      const preH = this.hooks.preHandler;
+      if (onReq.length > 0 || preP.length > 0) {
+        this._runHooksChain(onReq, ctx, 0, () => {
+          this._runHooksChain(preP, ctx, 0, () => { this._runHandler(ctx, res, match); });
+        });
+        return;
+      }
+      this._runHandler(ctx, res, match);
+    } catch (error) { this.handleError(error, ctx); }
+  }
 
-      if (onReq.length > 0) { for (let i = 0; i < onReq.length; i++) { const r = await onReq[i](ctx); if (r === false || ctx.res.headersSent) return; } }
-      if (preP.length > 0) { for (let i = 0; i < preP.length; i++) { const r = await preP[i](ctx); if (r === false || ctx.res.headersSent) return; } }
+  private _runHandler(ctx: TlevorContext, res: ServerResponse, match: { handler: HookHandler; method: HTTPMethod; params: Record<string, string> }): void {
+    try {
+      const schema = this.routeSchemas.get(match.handler);
 
       if (schema?.body) { const { valid, errors } = validateData(ctx.req.body, schema.body); if (!valid) { ctx.res.status(400).json({ error: 'Validation failed', code: 'VALIDATION_ERROR', statusCode: 400, details: errors }); return; } }
       if (schema?.query) { const { valid, errors } = validateData(ctx.req.query, schema.query); if (!valid) { ctx.res.status(400).json({ error: 'Validation failed', code: 'VALIDATION_ERROR', statusCode: 400, details: errors }); return; } }
       if (schema?.params) { const { valid, errors } = validateData(ctx.req.params, schema.params); if (!valid) { ctx.res.status(400).json({ error: 'Validation failed', code: 'VALIDATION_ERROR', statusCode: 400, details: errors }); return; } }
 
-      if (preV.length > 0) { for (let i = 0; i < preV.length; i++) { const r = await preV[i](ctx); if (r === false || ctx.res.headersSent) return; } }
-      if (preH.length > 0) { for (let i = 0; i < preH.length; i++) { const r = await preH[i](ctx); if (r === false || ctx.res.headersSent) return; } }
-
-      const result = await match.handler(ctx);
-      if (!ctx.res.headersSent && result !== undefined) {
-        if (typeof result === 'string') { res.setHeader('Content-Type', 'text/plain'); res.end(result); }
-        else { res.setHeader('Content-Type', 'application/json'); res.end(JSON.stringify(result)); }
+      const preV = this.hooks.preValidation;
+      const preH = this.hooks.preHandler;
+      if (preV.length > 0 || preH.length > 0) {
+        this._runHooksChain(preV, ctx, 0, () => {
+          this._runHooksChain(preH, ctx, 0, () => { this._callHandler(ctx, res, match); });
+        });
+        return;
       }
 
-      const postH = this.hooks.postHandler;
-      const onRes = this.hooks.onResponse;
-      if (postH.length > 0) { for (let i = 0; i < postH.length; i++) await postH[i](ctx); }
-      if (onRes.length > 0) { for (let i = 0; i < onRes.length; i++) await onRes[i](ctx); }
+      this._callHandler(ctx, res, match);
     } catch (error) { this.handleError(error, ctx); }
+  }
+
+  private _callHandler(ctx: TlevorContext, res: ServerResponse, match: { handler: HookHandler; method: HTTPMethod; params: Record<string, string> }): void {
+    try {
+      const result = match.handler(ctx);
+
+      if (result != null && typeof (result as any).then === 'function') {
+        (result as any).then(
+          (resolved: any) => {
+            this._writeResponse(ctx, res, resolved);
+            this._runPostHooks(ctx);
+          },
+          (error: any) => { this.handleError(error, ctx); }
+        );
+      } else {
+        this._writeResponse(ctx, res, result);
+        this._runPostHooks(ctx);
+      }
+    } catch (error) { this.handleError(error, ctx); }
+  }
+
+  private _writeResponse(ctx: TlevorContext, res: ServerResponse, result: any): void {
+    if (!ctx.res.headersSent && result !== undefined) {
+      if (typeof result === 'string') {
+        res.writeHead(200, { 'Content-Type': 'text/plain' });
+        res.end(result);
+      } else {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify(result));
+      }
+    }
+  }
+
+  private _runPostHooks(ctx: TlevorContext): void {
+    const postH = this.hooks.postHandler;
+    const onRes = this.hooks.onResponse;
+    if (postH.length > 0 || onRes.length > 0) {
+      this._runHooksChain(postH, ctx, 0, () => {
+        this._runHooksChain(onRes, ctx, 0, () => {});
+      });
+    }
+  }
+
+  private _runHooksChain(hooks: HookHandler[], ctx: TlevorContext, index: number, done: () => void): void {
+    if (index >= hooks.length) { done(); return; }
+    try {
+      const result = hooks[index](ctx);
+      if (result != null && typeof (result as any).then === 'function') {
+        (result as any).then(
+          (r: any) => { if (r === false || ctx.res.headersSent) return; this._runHooksChain(hooks, ctx, index + 1, done); },
+          (err: any) => { this.handleError(err, ctx); }
+        );
+      } else {
+        if ((result as any) === false || ctx.res.headersSent) return;
+        this._runHooksChain(hooks, ctx, index + 1, done);
+      }
+    } catch (err) { this.handleError(err, ctx); }
   }
 
   private handleError(error: unknown, ctx: TlevorContext): void {
@@ -499,13 +576,6 @@ export class TlevorApp {
     if (!ctx.res.headersSent) ctx.res.status(500).json({ error: 'Internal Server Error', code: 'INTERNAL_ERROR', statusCode: 500 });
   }
 
-  private parseQuery(url: string): Record<string, string> {
-    const qi = url.indexOf('?'); if (qi === -1) return {};
-    const query: Record<string, string> = {};
-    const pairs = url.slice(qi + 1).split('&');
-    for (let i = 0; i < pairs.length; i++) { const pair = pairs[i]; const eq = pair.indexOf('='); if (eq > 0) query[decodeURIComponent(pair.slice(0, eq))] = decodeURIComponent(pair.slice(eq + 1)); else if (pair) query[decodeURIComponent(pair)] = ''; }
-    return query;
-  }
 }
 
 export function createApp(options?: TlevorAppOptions): TlevorApp { return new TlevorApp(options); }
