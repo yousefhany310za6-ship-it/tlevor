@@ -37,6 +37,19 @@ importers:
         specifier: ^5.4.5
         version: 5.9.3
 
+  packages/config:
+    dependencies:
+      '@tlevor/types':
+        specifier: workspace:*
+        version: link:../types
+    devDependencies:
+      '@types/node':
+        specifier: ^20.19.43
+        version: 20.19.43
+      typescript:
+        specifier: ^5.4.5
+        version: 5.9.3
+
   packages/core:
     dependencies:
       '@tlevor/router':
@@ -48,6 +61,15 @@ importers:
     devDependencies:
       '@types/node':
         specifier: ^20.12.7
+        version: 20.19.43
+      typescript:
+        specifier: ^5.4.5
+        version: 5.9.3
+
+  packages/di:
+    devDependencies:
+      '@types/node':
+        specifier: ^20.19.43
         version: 20.19.43
       typescript:
         specifier: ^5.4.5

@@ -6,14 +6,14 @@ interface RouteNode {
   paramChild: RouteNode | null;
   paramName: string | null;
   wildcardChild: RouteNode | null;
-  handler: RouteHandler | null;
+  handlers: Map<HTTPMethod, RouteHandler>;
   methods: Set<HTTPMethod>;
   isWildcard: boolean;
 }
 
 interface MatchResult {
   handler: RouteHandler;
-  methods: Set<HTTPMethod>;
+  method: HTTPMethod;
   params: Record<string, string>;
 }
 
@@ -24,7 +24,7 @@ function createNode(path: string = ''): RouteNode {
     paramChild: null,
     paramName: null,
     wildcardChild: null,
-    handler: null,
+    handlers: new Map(),
     methods: new Set(),
     isWildcard: false,
   };
@@ -71,8 +71,8 @@ export class Router {
 
     for (const m of methods) {
       current.methods.add(m);
+      current.handlers.set(m, handler);
     }
-    current.handler = handler;
     this.routeCount++;
   }
 
@@ -81,11 +81,7 @@ export class Router {
     const segments = normalizedPath.split('/').filter(Boolean);
 
     const result = this.matchNode(this.root, segments, 0, {});
-    if (!result || !result.handler) {
-      return null;
-    }
-
-    if (!result.methods.has(method)) {
+    if (!result) {
       return null;
     }
 
@@ -99,8 +95,62 @@ export class Router {
     params: Record<string, string>
   ): MatchResult | null {
     if (index === segments.length) {
-      if (node.handler) {
-        return { handler: node.handler, methods: node.methods, params };
+      // Check if this node has a handler for any method
+      if (node.methods.size > 0) {
+        // Return the first available handler (will be filtered by method later)
+        for (const [method, handler] of node.handlers) {
+          return { handler, method, params };
+        }
+      }
+      return null;
+    }
+
+    const segment = segments[index];
+
+    // Try exact match first
+    const exactChild = node.children.get(segment);
+    if (exactChild) {
+      const result = this.matchNode(exactChild, segments, index + 1, params);
+      if (result) return result;
+    }
+
+    // Try parameter match
+    if (node.paramChild) {
+      const paramName = node.paramChild.paramName!;
+      const newParams = { ...params, [paramName]: segment };
+      const result = this.matchNode(node.paramChild, segments, index + 1, newParams);
+      if (result) return result;
+    }
+
+    // Try wildcard match
+    if (node.wildcardChild) {
+      const wildcardPath = segments.slice(index).join('/');
+      const newParams = { ...params, '*': wildcardPath };
+      for (const [method, handler] of node.wildcardChild.handlers) {
+        return { handler, method, params: newParams };
+      }
+    }
+
+    return null;
+  }
+
+  findRouteByMethod(method: HTTPMethod, path: string): MatchResult | null {
+    const normalizedPath = this.normalizePath(path);
+    const segments = normalizedPath.split('/').filter(Boolean);
+
+    return this.matchNodeByMethod(this.root, segments, 0, {}, method);
+  }
+
+  private matchNodeByMethod(
+    node: RouteNode,
+    segments: string[],
+    index: number,
+    params: Record<string, string>,
+    method: HTTPMethod
+  ): MatchResult | null {
+    if (index === segments.length) {
+      if (node.handlers.has(method)) {
+        return { handler: node.handlers.get(method)!, method, params };
       }
       return null;
     }
@@ -109,21 +159,23 @@ export class Router {
 
     const exactChild = node.children.get(segment);
     if (exactChild) {
-      const result = this.matchNode(exactChild, segments, index + 1, params);
+      const result = this.matchNodeByMethod(exactChild, segments, index + 1, params, method);
       if (result) return result;
     }
 
     if (node.paramChild) {
       const paramName = node.paramChild.paramName!;
       const newParams = { ...params, [paramName]: segment };
-      const result = this.matchNode(node.paramChild, segments, index + 1, newParams);
+      const result = this.matchNodeByMethod(node.paramChild, segments, index + 1, newParams, method);
       if (result) return result;
     }
 
     if (node.wildcardChild) {
       const wildcardPath = segments.slice(index).join('/');
       const newParams = { ...params, '*': wildcardPath };
-      return { handler: node.wildcardChild.handler!, methods: node.wildcardChild.methods, params: newParams };
+      if (node.wildcardChild.handlers.has(method)) {
+        return { handler: node.wildcardChild.handlers.get(method)!, method, params: newParams };
+      }
     }
 
     return null;
@@ -149,10 +201,8 @@ export class Router {
     currentPath: string,
     routes: Array<{ method: HTTPMethod; path: string }>
   ): void {
-    if (node.handler) {
-      for (const method of node.methods) {
-        routes.push({ method, path: currentPath || '/' });
-      }
+    for (const method of node.methods) {
+      routes.push({ method, path: currentPath || '/' });
     }
 
     for (const [segment, child] of node.children) {
