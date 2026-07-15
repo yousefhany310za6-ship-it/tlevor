@@ -1,0 +1,13 @@
+node_modules/
+dist/
+*.tsbuildinfo
+.env
+.env.local
+.DS_Store
+*.log
+
+# Build artifacts
+packages/*/src/*.js
+packages/*/src/*.d.ts
+packages/*/src/*.map
+packages/*/src/*.d.ts.map

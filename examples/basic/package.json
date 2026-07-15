@@ -1,0 +1,19 @@
+{
+  "name": "tlevor-basic-example",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "tsx src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "@tlevor/core": "workspace:*",
+    "@tlevor/logger": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^20.12.7",
+    "tsx": "^4.10.1",
+    "typescript": "^5.4.5"
+  }
+}
