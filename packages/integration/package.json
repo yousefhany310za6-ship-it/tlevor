@@ -1,0 +1,28 @@
+{
+  "name": "@tlevor/integration",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Tlevor integration tests — features wired into the core app",
+  "type": "module",
+  "scripts": {
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@tlevor/core": "workspace:*",
+    "@tlevor/router": "workspace:*",
+    "@tlevor/types": "workspace:*",
+    "@tlevor/auth": "workspace:*",
+    "@tlevor/cache": "workspace:*",
+    "@tlevor/validation": "workspace:*",
+    "@tlevor/orm": "workspace:*",
+    "@tlevor/monitoring": "workspace:*",
+    "@tlevor/tracing": "workspace:*",
+    "@tlevor/swagger": "workspace:*",
+    "@tlevor/graphql": "workspace:*"
+  },
+  "devDependencies": {
+    "vitest": "^1.6.0",
+    "typescript": "^5.4.5",
+    "@types/node": "^20.12.7"
+  }
+}
