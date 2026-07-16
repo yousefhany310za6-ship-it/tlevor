@@ -9,6 +9,7 @@
   },
   "dependencies": {
     "@tlevor/core": "workspace:*",
+    "@tlevor/orm": "workspace:*",
     "@tlevor/logger": "workspace:*"
   },
   "devDependencies": {

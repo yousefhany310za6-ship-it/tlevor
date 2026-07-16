@@ -1,5 +1,9 @@
-import { describe, it, expect } from 'vitest';
-import { QueryBuilder, Model, MemorySessionStore } from '../src/index';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { QueryBuilder, Model, MemoryAdapter, SqliteAdapter, createAdapter, syncModel } from '../src/index';
+import type { DatabaseAdapter } from '../src/index';
+import { tmpdir } from 'os';
+import { join } from 'path';
+import { existsSync, unlinkSync } from 'fs';
 
 describe('QueryBuilder', () => {
   it('should build SELECT query', () => {
@@ -143,4 +147,182 @@ describe('Model', () => {
     const q = model.query();
     expect(q).toBeInstanceOf(QueryBuilder);
   });
+});
+
+// ─── Adapters ────────────────────────────────────────────────────────────────
+
+describe('MemoryAdapter', () => {
+  let adapter: MemoryAdapter;
+  beforeEach(async () => { adapter = new MemoryAdapter(); await adapter.connect(); });
+  afterEach(async () => { await adapter.disconnect(); });
+
+  it('creates and finds a record (auto id)', async () => {
+    const created = await adapter.create('users', { name: 'Alice' });
+    expect(created.id).toBeDefined();
+    const found = await adapter.findOne('users', { id: created.id });
+    expect(found?.name).toBe('Alice');
+  });
+
+  it('runs full CRUD', async () => {
+    const created = await adapter.create('users', { name: 'Bob' });
+    const updated = await adapter.update('users', created.id, { name: 'Bobby' });
+    expect(updated.name).toBe('Bobby');
+    expect(await adapter.count('users')).toBe(1);
+    expect(await adapter.delete('users', created.id)).toBe(true);
+    expect(await adapter.findOne('users', { id: created.id })).toBeNull();
+  });
+
+  it('filters/sorts/paginates via findMany', async () => {
+    await adapter.create('users', { name: 'A', age: 30 });
+    await adapter.create('users', { name: 'B', age: 20 });
+    await adapter.create('users', { name: 'C', age: 25 });
+
+    const adults = await adapter.findMany('users', { where: { age: 30 } });
+    expect(adults.length).toBe(1);
+
+    const sorted = await adapter.findMany('users', { orderBy: { age: 'asc' } });
+    expect(sorted.map((u) => u.name)).toEqual(['B', 'C', 'A']);
+
+    const paged = await adapter.findMany('users', { limit: 2, offset: 1 });
+    expect(paged.length).toBe(2);
+  });
+
+  it('upserts existing records', async () => {
+    const created = await adapter.create('users', { id: 'u1', name: 'X' });
+    const upserted = await adapter.upsert('users', { id: 'u1', name: 'Y' });
+    expect(upserted.name).toBe('Y');
+    expect(created.id).toBe('u1');
+  });
+});
+
+describe('createAdapter factory', () => {
+  it('returns a MemoryAdapter for "memory"', () => {
+    expect(createAdapter('memory')).toBeInstanceOf(MemoryAdapter);
+  });
+  it('returns a SqliteAdapter for "sqlite" (in-memory)', () => {
+    expect(createAdapter('sqlite', { sqlite: { memory: true } })).toBeInstanceOf(SqliteAdapter);
+  });
+});
+
+describe('SqliteAdapter', () => {
+  let file: string;
+  let adapter: SqliteAdapter;
+
+  beforeEach(async () => {
+    file = join(tmpdir(), `tlevor-orm-test-${Date.now()}-${Math.random().toString(36).slice(2)}.db`);
+    adapter = new SqliteAdapter({ file });
+    await adapter.connect();
+  });
+
+  afterEach(async () => {
+    await adapter.disconnect();
+    if (existsSync(file)) unlinkSync(file);
+  });
+
+  // Model metadata normally produced by @Table/@Column decorators; built
+  // manually here to avoid requiring experimentalDecorators in the test runner.
+  class Product {}
+  (Product as any).__modelOptions = { tableName: 'products' };
+  (Product as any).__columns = { name: { type: 'string' }, price: { type: 'number' } };
+
+  it('syncs a table from decorators and runs full CRUD', async () => {
+    await syncModel(Product, adapter);
+
+    const model = new Model(adapter, { tableName: 'products' });
+    const created = await model.create({ name: 'Book', price: 10 });
+    expect(created.id).toBeDefined();
+    expect(created.name).toBe('Book');
+
+    const fetched = await model.findById(created.id);
+    expect(fetched?.price).toBe(10);
+
+    await model.update(created.id, { price: 12 });
+    expect((await model.findById(created.id))?.price).toBe(12);
+
+    expect(await model.count()).toBe(1);
+    expect(await model.delete(created.id)).toBe(true);
+    expect(await model.findById(created.id)).toBeNull();
+  });
+
+  it('supports transactions', async () => {
+    await syncModel(Product, adapter);
+    const model = new Model(adapter, { tableName: 'products' });
+    await adapter.transaction(async (tx) => {
+      const m = new Model(tx, { tableName: 'products' });
+      await m.create({ name: 'T1', price: 1 });
+      await m.create({ name: 'T2', price: 2 });
+    });
+    expect(await model.count()).toBe(2);
+  });
+});
+
+// ─── QueryBuilder.execute (functional) ──────────────────────────────────────
+
+describe('QueryBuilder.execute', () => {
+  const adapters: Array<[string, () => Promise<DatabaseAdapter>]> = [
+    ['MemoryAdapter', async () => { const a = new MemoryAdapter(); await a.connect(); return a; }],
+    ['SqliteAdapter', async () => {
+      const a = new SqliteAdapter({ memory: true });
+      await a.connect();
+      await a.sync({ tableName: 'people', primaryKey: 'id', columns: { name: { type: 'string' }, age: { type: 'number' } } });
+      return a;
+    }],
+  ];
+
+  for (const [name, make] of adapters) {
+    describe(name, () => {
+      let adapter: DatabaseAdapter;
+
+      beforeEach(async () => { adapter = await make(); });
+      afterEach(async () => { await adapter.disconnect(); });
+
+      it('inserts and selects rows', async () => {
+        await new QueryBuilder('people').insert({ name: 'Alice', age: 30 }).execute(adapter);
+        await new QueryBuilder('people').insert({ name: 'Bob', age: 25 }).execute(adapter);
+
+        const rows = await new QueryBuilder('people').select().orderBy('age', 'asc').execute(adapter);
+        expect(rows.length).toBe(2);
+        expect(rows.map((r: any) => r.name)).toEqual(['Bob', 'Alice']);
+      });
+
+      it('filters with WHERE', async () => {
+        await new QueryBuilder('people').insert({ name: 'Alice', age: 30 }).execute(adapter);
+        await new QueryBuilder('people').insert({ name: 'Bob', age: 25 }).execute(adapter);
+
+        const adults = await new QueryBuilder('people').select().where('age', '>', 26).execute(adapter);
+        expect(adults.length).toBe(1);
+        expect(adults[0].name).toBe('Alice');
+      });
+
+      it('updates rows', async () => {
+        const created = await new QueryBuilder('people').insert({ name: 'Alice', age: 30 }).execute(adapter);
+        const id = created.insertId ?? created.lastID ?? created.rowid;
+
+        const result = await new QueryBuilder('people').update({ age: 31 }).where('name', '=', 'Alice').execute(adapter);
+        expect(result.changes).toBe(1);
+
+        const found = await new QueryBuilder('people').select().where('name', '=', 'Alice').execute(adapter);
+        const row = found[0];
+        expect(row.age).toBe(31);
+        expect(id).toBeDefined();
+      });
+
+      it('counts rows', async () => {
+        await new QueryBuilder('people').insert({ name: 'Alice', age: 30 }).execute(adapter);
+        await new QueryBuilder('people').insert({ name: 'Bob', age: 25 }).execute(adapter);
+
+        const count = await new QueryBuilder('people').count().execute(adapter);
+        const value = Array.isArray(count) ? Number(count[0]?.count ?? count[0]?.c ?? 0) : count;
+        expect(value).toBe(2);
+      });
+
+      it('deletes rows', async () => {
+        await new QueryBuilder('people').insert({ name: 'Alice', age: 30 }).execute(adapter);
+        await new QueryBuilder('people').delete().where('name', '=', 'Alice').execute(adapter);
+
+        const rows = await new QueryBuilder('people').select().execute(adapter);
+        expect(rows.length).toBe(0);
+      });
+    });
+  }
 });

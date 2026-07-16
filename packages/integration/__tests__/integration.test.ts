@@ -13,7 +13,7 @@ import { createApp } from '../../core/src/index';
 import { createAuth } from '../../auth/src/index';
 import { MemoryCache, cacheMiddleware } from '../../cache/src/index';
 import { createValidator } from '../../validation/src/index';
-import { Model } from '../../orm/src/index';
+import { createAdapter, syncModel, Model } from '../../orm/src/index';
 import type { DatabaseAdapter } from '../../orm/src/index';
 import { createMetricsRegistry, metricsMiddleware } from '../../monitoring/src/index';
 import { createTracer, tracingMiddleware } from '../../tracing/src/index';
@@ -240,11 +240,11 @@ describe('Integration: Validation', () => {
 // ─── 5. ORM ───────────────────────────────────────────────────────────────────
 
 describe('Integration: ORM (in-memory adapter)', () => {
-  let adapter: InMemoryAdapter;
+  let adapter: any;
   let app: any;
 
   beforeEach(async () => {
-    adapter = new InMemoryAdapter();
+    adapter = createAdapter('memory');
     await adapter.connect();
     app = createApp({ logger: false, bodyParser: true });
     const User = new Model(adapter, { tableName: 'users', primaryKey: 'id' });
@@ -255,7 +255,7 @@ describe('Integration: ORM (in-memory adapter)', () => {
     app.addRoute({ method: 'DELETE', path: '/users/:id', handler: async (ctx) => ({ deleted: await User.delete(ctx.req.params.id) }) });
   });
 
-  afterEach(async () => { await app.close(); await adapter.disconnect(); });
+  afterEach(async () => { if (app && typeof app.close === 'function') await app.close(); if (adapter && typeof adapter.disconnect === 'function') await adapter.disconnect(); });
 
   it('performs full CRUD through HTTP routes', async () => {
     const created = await app.inject({ method: 'POST', url: '/users', body: { name: 'Alice' } });

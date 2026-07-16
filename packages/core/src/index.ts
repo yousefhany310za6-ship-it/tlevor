@@ -11,8 +11,10 @@ import type {
   HTTPMethod,
   WebSocketHandler as IWebSocketHandler,
   WebSocketConnection as IWebSocketConnection,
+  ValidationSchema,
 } from '@tlevor/types';
 import { Router } from '@tlevor/router';
+import { createValidator } from '@tlevor/validation';
 import { IncomingMessage, ServerResponse, createServer } from 'http';
 import { readFileSync, statSync, existsSync } from 'fs';
 import { resolve, extname, join } from 'path';
@@ -223,22 +225,20 @@ function serveStatic(options: StaticFilesOptions) {
 
 // ==================== Validation ====================
 
-export interface ValidationSchema { type?: string; properties?: Record<string, any>; required?: string[]; [key: string]: any; }
+// Core re-uses the shared @tlevor/validation engine instead of a duplicate implementation.
+export type { ValidationSchema } from '@tlevor/types';
+
+const _validator = createValidator();
 
 function validateData(data: any, schema: ValidationSchema): { valid: boolean; errors: string[] } {
-  const errors: string[] = [];
-  if (schema.required) { for (const field of schema.required) { if (data[field] === undefined || data[field] === null) errors.push(`"${field}" is required`); } }
-  if (schema.properties) { for (const [key, propSchema] of Object.entries(schema.properties)) { const value = data[key]; if (value === undefined || value === null) continue; if (propSchema.type === 'string' && typeof value !== 'string') errors.push(`"${key}" must be a string`); if (propSchema.type === 'number' && typeof value !== 'number') errors.push(`"${key}" must be a number`); if (propSchema.type === 'boolean' && typeof value !== 'boolean') errors.push(`"${key}" must be a boolean`); if (propSchema.minLength && typeof value === 'string' && value.length < propSchema.minLength) errors.push(`"${key}" must be at least ${propSchema.minLength} characters`); if (propSchema.maxLength && typeof value === 'string' && value.length > propSchema.maxLength) errors.push(`"${key}" must be at most ${propSchema.maxLength} characters`); if (propSchema.minimum && typeof value === 'number' && value < propSchema.minimum) errors.push(`"${key}" must be at least ${propSchema.minimum}`); if (propSchema.maximum && typeof value === 'number' && value > propSchema.maximum) errors.push(`"${key}" must be at most ${propSchema.maximum}`); if (propSchema.enum && !propSchema.enum.includes(value)) errors.push(`"${key}" must be one of: ${propSchema.enum.join(', ')}`); } }
-  return { valid: errors.length === 0, errors };
+  return _validator.validate(data, schema);
 }
 
 // ==================== Serialization ====================
 
 function serialize(data: any, schema?: ValidationSchema): any {
-  if (!schema || !schema.properties) return data;
-  const result: any = {};
-  for (const key of Object.keys(schema.properties)) { if (key in data) result[key] = data[key]; }
-  return result;
+  if (!schema) return data;
+  return _validator.serialize(data, schema);
 }
 
 // ==================== Request/Response ====================

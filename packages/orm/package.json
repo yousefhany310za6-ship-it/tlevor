@@ -7,9 +7,11 @@
     "build": "tsc"
   },
   "dependencies": {
-    "@tlevor/types": "workspace:*"
+    "@tlevor/types": "workspace:*",
+    "better-sqlite3": "^11.3.0"
   },
   "devDependencies": {
+    "@types/better-sqlite3": "^7.6.11",
     "@types/node": "^20.12.7",
     "typescript": "^5.4.5"
   }

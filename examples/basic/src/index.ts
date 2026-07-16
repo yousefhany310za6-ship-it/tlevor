@@ -1,5 +1,5 @@
-import { createApp } from '../../packages/core/src/index';
-import { serveStatic } from '../../packages/core/src/index';
+import { createApp, serveStatic } from '@tlevor/core';
+import { createAdapter, Model } from '@tlevor/orm';
 
 const app = createApp({
   cors: true,
@@ -10,7 +10,7 @@ const app = createApp({
 // Rate limiting
 app.rateLimit({ max: 100, window: 60000 }); // 100 requests per minute
 
-// Validation schemas
+// Validation schemas (validated by the shared @tlevor/validation engine via core)
 const createUserSchema = {
   type: 'object',
   required: ['name', 'email'],
@@ -25,24 +25,22 @@ const createUserSchema = {
 const userResponseSchema = {
   type: 'object',
   properties: {
-    id: { type: 'number' },
+    id: { type: 'string' },
     name: { type: 'string' },
     email: { type: 'string' },
     role: { type: 'string' },
   },
 };
 
-// In-memory user store
-let users = [
-  { id: 1, name: 'John Doe', email: 'john@example.com', role: 'admin' },
-  { id: 2, name: 'Jane Smith', email: 'jane@example.com', role: 'user' },
-];
+// User model is wired up in start() (ORM adapter requires an async connect)
+let User: Model;
 
 // GET /users - List all users
 app.addRoute({
   method: 'GET',
   path: '/users',
-  handler: async (ctx) => {
+  handler: async () => {
+    const users = await User.findMany();
     return { users, total: users.length };
   },
 });
@@ -52,13 +50,9 @@ app.addRoute({
   method: 'POST',
   path: '/users',
   handler: async (ctx) => {
-    const newUser = {
-      id: users.length > 0 ? Math.max(...users.map(u => u.id)) + 1 : 1,
-      ...ctx.req.body,
-    };
-    users.push(newUser);
+    const created = await User.create(ctx.req.body);
     ctx.res.status(201);
-    return newUser;
+    return created;
   },
   schema: { body: createUserSchema, response: userResponseSchema },
 });
@@ -68,8 +62,7 @@ app.addRoute({
   method: 'GET',
   path: '/users/:id',
   handler: async (ctx) => {
-    const id = parseInt(ctx.req.params.id);
-    const user = users.find(u => u.id === id);
+    const user = await User.findById(ctx.req.params.id);
     if (!user) {
       ctx.res.status(404);
       return { error: 'User not found' };
@@ -83,14 +76,12 @@ app.addRoute({
   method: 'PUT',
   path: '/users/:id',
   handler: async (ctx) => {
-    const id = parseInt(ctx.req.params.id);
-    const index = users.findIndex(u => u.id === id);
-    if (index === -1) {
+    const updated = await User.update(ctx.req.params.id, ctx.req.body);
+    if (!updated) {
       ctx.res.status(404);
       return { error: 'User not found' };
     }
-    users[index] = { ...users[index], ...ctx.req.body };
-    return users[index];
+    return updated;
   },
   schema: { body: createUserSchema, response: userResponseSchema },
 });
@@ -100,13 +91,11 @@ app.addRoute({
   method: 'DELETE',
   path: '/users/:id',
   handler: async (ctx) => {
-    const id = parseInt(ctx.req.params.id);
-    const index = users.findIndex(u => u.id === id);
-    if (index === -1) {
+    const ok = await User.delete(ctx.req.params.id);
+    if (!ok) {
       ctx.res.status(404);
       return { error: 'User not found' };
     }
-    users.splice(index, 1);
     ctx.res.status(204);
   },
 });
@@ -215,7 +204,14 @@ process.on('SIGTERM', async () => {
 
 async function start() {
   try {
-    await app.listen(3000);
+    // Wire up the ORM (in-memory adapter; swap 'memory' for 'sqlite' to persist)
+    const adapter = createAdapter('memory');
+    await adapter.connect();
+    User = new Model(adapter, { tableName: 'users', primaryKey: 'id' });
+    await User.create({ name: 'John Doe', email: 'john@example.com', role: 'admin' });
+    await User.create({ name: 'Jane Smith', email: 'jane@example.com', role: 'user' });
+
+    await app.listen(4088);
     console.log('Tlevor server running on http://localhost:3000');
     console.log('Try these endpoints:');
     console.log('  GET    http://localhost:3000/users');

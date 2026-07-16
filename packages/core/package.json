@@ -9,6 +9,7 @@
   "dependencies": {
     "@tlevor/types": "workspace:*",
     "@tlevor/router": "workspace:*",
+    "@tlevor/validation": "workspace:*",
     "ws": "^8.16.0"
   },
   "devDependencies": {
