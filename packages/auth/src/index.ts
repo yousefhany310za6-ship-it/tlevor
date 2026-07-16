@@ -298,7 +298,7 @@ export class AuthManager {
       if (authHeader && authHeader.startsWith('Bearer ') && this.jwt) {
         const token = authHeader.slice(7);
         const payload = this.jwt.verify(token);
-        if (payload) { (ctx.state as any).user = { id: payload.sub, ...payload } as AuthUser; return; }
+        if (payload) { (ctx.state as any).user = { id: normalizeUserId(payload.sub), ...payload } as AuthUser; return; }
       }
 
       // Try session
@@ -307,7 +307,7 @@ export class AuthManager {
         if (sessionId) {
           const sessionData = await this.session.get(sessionId);
           if (sessionData) {
-            (ctx.state as any).user = { id: sessionData.userId, ...sessionData.data } as AuthUser;
+            (ctx.state as any).user = { id: normalizeUserId(sessionData.userId), ...sessionData.data } as AuthUser;
             (ctx.state as any).session = sessionData;
             return;
           }
@@ -342,3 +342,16 @@ export function createAuth(options: AuthOptions): AuthManager {
 }
 
 export { base64url, base64urlDecode };
+
+/**
+ * Normalize a user identifier to a number when it is a numeric string.
+ * Keeps string ids (e.g. UUIDs) untouched. This keeps `ctx.state.user.id`
+ * consistent with numeric primary keys coming from SQL adapters, avoiding
+ * string/number mismatches when comparing ownership.
+ */
+export function normalizeUserId(id: any): any {
+  if (typeof id === 'string' && id.trim() !== '' && !isNaN(Number(id))) {
+    return Number(id);
+  }
+  return id;
+}

@@ -120,4 +120,33 @@ describe('AuthManager', () => {
     const auth = new AuthManager();
     expect(() => auth.getJwt()).toThrow('JWT not configured');
   });
+
+  it('normalizes a numeric sub to a number on the authenticated user', async () => {
+    const auth = new AuthManager({ jwt: { secret: 'test' } });
+    const token = auth.getJwt().sign({ sub: '42', role: 'admin' });
+
+    const ctx: any = {
+      req: { headers: { authorization: `Bearer ${token}` } },
+      res: { status: () => ({ json: () => {} }), json: () => {}, headersSent: false },
+      state: {},
+    };
+    const result = auth.authenticate()(ctx);
+    if (result && typeof (result as any).then === 'function') await result;
+    expect((ctx.state as any).user.id).toBe(42);
+    expect(typeof (ctx.state as any).user.id).toBe('number');
+  });
+
+  it('keeps a non-numeric id (e.g. UUID) as a string', async () => {
+    const auth = new AuthManager({ jwt: { secret: 'test' } });
+    const token = auth.getJwt().sign({ sub: 'abc-123', role: 'user' });
+
+    const ctx: any = {
+      req: { headers: { authorization: `Bearer ${token}` } },
+      res: { status: () => ({ json: () => {} }), json: () => {}, headersSent: false },
+      state: {},
+    };
+    const result = auth.authenticate()(ctx);
+    if (result && typeof (result as any).then === 'function') await result;
+    expect((ctx.state as any).user.id).toBe('abc-123');
+  });
 });

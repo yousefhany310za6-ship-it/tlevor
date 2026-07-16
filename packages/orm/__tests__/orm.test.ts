@@ -326,3 +326,39 @@ describe('QueryBuilder.execute', () => {
     });
   }
 });
+
+// ─── Model timestamp safety ──────────────────────────────────────────────────
+
+describe('Model timestamps (smart injection)', () => {
+  it('skips timestamps when the table has no timestamp columns', async () => {
+    const adapter = new SqliteAdapter({ memory: true });
+    await adapter.connect();
+    await adapter.execute('CREATE TABLE notes (id INTEGER PRIMARY KEY AUTOINCREMENT, body TEXT)');
+
+    // No sync(), no timestampColumns → Model must NOT inject createdAt/updatedAt
+    // and must NOT fail on a missing column.
+    const Notes = new Model(adapter, { tableName: 'notes' });
+    const created = await Notes.create({ body: 'hi' });
+    expect(created.id).toBeDefined();
+    expect(created.createdAt).toBeUndefined();
+
+    const fetched = await Notes.findById(created.id);
+    expect(fetched.body).toBe('hi');
+    expect(fetched.createdAt).toBeUndefined();
+  });
+
+  it('injects only the declared timestamp columns', async () => {
+    const adapter = new SqliteAdapter({ memory: true });
+    await adapter.connect();
+    await adapter.execute('CREATE TABLE logs (id INTEGER PRIMARY KEY AUTOINCREMENT, createdAt TEXT, msg TEXT)');
+
+    const Logs = new Model(adapter, { tableName: 'logs', timestampColumns: ['createdAt'] });
+    const created = await Logs.create({ msg: 'x' });
+    expect(created.createdAt).toBeDefined();
+    expect(created.updatedAt).toBeUndefined();
+
+    const updated = await Logs.update(created.id, { msg: 'y' });
+    // updatedAt column doesn't exist → no updatedAt stamped
+    expect(updated.updatedAt).toBeUndefined();
+  });
+});

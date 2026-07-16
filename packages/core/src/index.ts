@@ -342,6 +342,7 @@ export class TlevorApp {
   private securityHeaders: boolean;
   private rateLimiter: RateLimiter | null = null;
   private routeSchemas: Map<any, any> = new Map();
+  private routeHooks: Map<any, Partial<TlevorHooks>> = new Map();
   private wsHandlers: Map<string, IWebSocketHandler> = new Map();
   private wss: WebSocketServer | null = null;
   private wsConnections: Map<string, WebSocketConnectionImpl> = new Map();
@@ -357,9 +358,10 @@ export class TlevorApp {
   }
 
   addRoute(options: RouteConfig): void {
-    const { method, path, handler, schema } = options;
+    const { method, path, handler, schema, hooks } = options;
     this.router.addRoute(method, path, handler);
     if (schema) this.routeSchemas.set(handler, schema);
+    if (hooks) this.routeHooks.set(handler, normalizeHooks(hooks));
   }
 
   addHook(name: HookName, handler: HookHandler): void {
@@ -479,8 +481,9 @@ export class TlevorApp {
 
   private _dispatchHandler(ctx: TlevorContext, res: ServerResponse, match: { handler: HookHandler; method: HTTPMethod; params: Record<string, string> }): void {
     try {
-      const onReq = this.hooks.onRequest;
-      const preP = this.hooks.preParsing;
+      // Global hooks run first, then any route-scoped hooks.
+      const onReq = this.mergedHooks(match.handler, 'onRequest');
+      const preP = this.mergedHooks(match.handler, 'preParsing');
       if (onReq.length > 0 || preP.length > 0) {
         this._runHooksChain(onReq, ctx, 0, () => {
           this._runHooksChain(preP, ctx, 0, () => { this._runHandler(ctx, res, match); });
@@ -491,6 +494,14 @@ export class TlevorApp {
     } catch (error) { this.handleError(error, ctx); }
   }
 
+  /** Concatenate the global hook list with the route-scoped one (global first). */
+  private mergedHooks(handler: HookHandler, name: HookName): HookHandler[] {
+    const global = this.hooks[name];
+    const route = this.routeHooks.get(handler)?.[name];
+    if (!route || route.length === 0) return global;
+    return global.concat(route);
+  }
+
   private _runHandler(ctx: TlevorContext, res: ServerResponse, match: { handler: HookHandler; method: HTTPMethod; params: Record<string, string> }): void {
     try {
       const schema = this.routeSchemas.get(match.handler);
@@ -499,8 +510,8 @@ export class TlevorApp {
       if (schema?.query) { const { valid, errors } = validateData(ctx.req.query, schema.query); if (!valid) { ctx.res.status(400).json({ error: 'Validation failed', code: 'VALIDATION_ERROR', statusCode: 400, details: errors }); return; } }
       if (schema?.params) { const { valid, errors } = validateData(ctx.req.params, schema.params); if (!valid) { ctx.res.status(400).json({ error: 'Validation failed', code: 'VALIDATION_ERROR', statusCode: 400, details: errors }); return; } }
 
-      const preV = this.hooks.preValidation;
-      const preH = this.hooks.preHandler;
+      const preV = this.mergedHooks(match.handler, 'preValidation');
+      const preH = this.mergedHooks(match.handler, 'preHandler');
       if (preV.length > 0 || preH.length > 0) {
         this._runHooksChain(preV, ctx, 0, () => {
           this._runHooksChain(preH, ctx, 0, () => { this._callHandler(ctx, res, match); });
@@ -520,13 +531,13 @@ export class TlevorApp {
         (result as any).then(
           (resolved: any) => {
             this._writeResponse(ctx, res, resolved);
-            this._runPostHooks(ctx);
+            this._runPostHooks(ctx, match.handler);
           },
           (error: any) => { this.handleError(error, ctx); }
         );
       } else {
         this._writeResponse(ctx, res, result);
-        this._runPostHooks(ctx);
+        this._runPostHooks(ctx, match.handler);
       }
     } catch (error) { this.handleError(error, ctx); }
   }
@@ -543,9 +554,9 @@ export class TlevorApp {
     }
   }
 
-  private _runPostHooks(ctx: TlevorContext): void {
-    const postH = this.hooks.postHandler;
-    const onRes = this.hooks.onResponse;
+  private _runPostHooks(ctx: TlevorContext, handler?: HookHandler): void {
+    const postH = this.mergedHooks(handler as HookHandler, 'postHandler');
+    const onRes = this.mergedHooks(handler as HookHandler, 'onResponse');
     if (postH.length > 0 || onRes.length > 0) {
       this._runHooksChain(postH, ctx, 0, () => {
         this._runHooksChain(onRes, ctx, 0, () => {});
@@ -580,3 +591,12 @@ export class TlevorApp {
 
 export function createApp(options?: TlevorAppOptions): TlevorApp { return new TlevorApp(options); }
 export { serveStatic, RateLimiter, parseCookies, SECURITY_HEADERS as getSecurityHeaders, validateData, serialize, parseQuery };
+
+function normalizeHooks(hooks: Partial<Record<HookName, HookHandler | HookHandler[]>>): Partial<TlevorHooks> {
+  const out: Partial<TlevorHooks> = {};
+  (Object.keys(hooks) as HookName[]).forEach((name) => {
+    const value = hooks[name];
+    out[name] = Array.isArray(value) ? value : value ? [value] : [];
+  });
+  return out;
+}

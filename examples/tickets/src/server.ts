@@ -92,6 +92,7 @@ export async function buildApp(db?: DatabaseAdapter): Promise<{ app: TlevorApp; 
   app.addRoute({
     method: 'POST',
     path: '/ticket-types',
+    hooks: { preHandler: [auth.authorize('admin')] },
     schema: {
       body: {
         type: 'object',
@@ -104,7 +105,6 @@ export async function buildApp(db?: DatabaseAdapter): Promise<{ app: TlevorApp; 
       },
     },
     handler: async (ctx) => {
-      requireAdmin(ctx);
       const { name, price, totalQuantity } = ctx.req.body;
       const existing = await TicketType.findOne({ where: { name } });
       if (existing) throw new TlevorError('Ticket type already exists', 409, 'TYPE_EXISTS');
@@ -115,6 +115,7 @@ export async function buildApp(db?: DatabaseAdapter): Promise<{ app: TlevorApp; 
   app.addRoute({
     method: 'PUT',
     path: '/ticket-types/:id',
+    hooks: { preHandler: [auth.authorize('admin')] },
     schema: {
       body: {
         type: 'object',
@@ -126,7 +127,6 @@ export async function buildApp(db?: DatabaseAdapter): Promise<{ app: TlevorApp; 
       },
     },
     handler: async (ctx) => {
-      requireAdmin(ctx);
       const id = Number(ctx.req.params.id);
       const updates = ctx.req.body;
       const current = await TicketType.findById(id);
@@ -140,8 +140,8 @@ export async function buildApp(db?: DatabaseAdapter): Promise<{ app: TlevorApp; 
   app.addRoute({
     method: 'DELETE',
     path: '/ticket-types/:id',
+    hooks: { preHandler: [auth.authorize('admin')] },
     handler: async (ctx) => {
-      requireAdmin(ctx);
       const id = Number(ctx.req.params.id);
       const current = await TicketType.findById(id);
       if (!current) throw new TlevorError('Ticket type not found', 404, 'NOT_FOUND');
@@ -158,7 +158,7 @@ export async function buildApp(db?: DatabaseAdapter): Promise<{ app: TlevorApp; 
     handler: async (ctx) => {
       const me = (ctx.state as any).user;
       // Admins see everything; regular users see only their own.
-      const where = me.role === 'admin' ? {} : { userId: Number(me.id) };
+      const where = me.role === 'admin' ? {} : { userId: me.id };
       return Ticket.findMany({ where, orderBy: { id: 'asc' } });
     },
   });
@@ -203,7 +203,7 @@ export async function buildApp(db?: DatabaseAdapter): Promise<{ app: TlevorApp; 
       const me = (ctx.state as any).user;
       const ticket = await Ticket.findById(id);
       if (!ticket) throw new TlevorError('Ticket not found', 404, 'NOT_FOUND');
-      if (me.role !== 'admin' && ticket.userId !== Number(me.id)) {
+      if (me.role !== 'admin' && ticket.userId !== me.id) {
         throw new TlevorError('Forbidden', 403, 'FORBIDDEN');
       }
 
@@ -226,14 +226,6 @@ function publicUser(u: any) {
   if (!u) return null;
   const { password, ...rest } = u;
   return rest;
-}
-
-/** Enforce admin role; throws 403 otherwise. */
-function requireAdmin(ctx: any): void {
-  const user = ctx.state?.user;
-  if (!user || (user.roles || [user.role]).indexOf('admin') === -1) {
-    throw new TlevorError('Admin role required', 403, 'FORBIDDEN');
-  }
 }
 
 /**

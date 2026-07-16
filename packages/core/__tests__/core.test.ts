@@ -385,6 +385,58 @@ describe('Security Headers', () => {
   });
 });
 
+describe('Route-level hooks', () => {
+  it('runs a route-scoped onRequest hook before the handler', async () => {
+    const app = createApp({ logger: false });
+    app.addRoute({
+      method: 'GET',
+      path: '/r',
+      hooks: {
+        onRequest: async (ctx) => { (ctx.state as any).marked = true; },
+      },
+      handler: async (ctx) => ({ marked: (ctx.state as any).marked === true }),
+    });
+    const res = await app.inject({ method: 'GET', url: '/r' });
+    expect(res.json().marked).toBe(true);
+    await app.close();
+  });
+
+  it('blocks the handler when a route-scoped preHandler hook returns false', async () => {
+    const app = createApp({ logger: false });
+    const handler = vi.fn(async () => ({ ok: true }));
+    app.addRoute({
+      method: 'GET',
+      path: '/admin',
+      hooks: {
+        preHandler: async (ctx) => {
+          ctx.res.status(403).json({ error: 'Forbidden', code: 'FORBIDDEN', statusCode: 403 });
+          return false;
+        },
+      },
+      handler,
+    });
+    const res = await app.inject({ method: 'GET', url: '/admin' });
+    expect(res.statusCode).toBe(403);
+    expect(handler).not.toHaveBeenCalled();
+    await app.close();
+  });
+
+  it('combines global and route-scoped hooks (global runs first)', async () => {
+    const app = createApp({ logger: false });
+    const order: string[] = [];
+    app.addHook('preHandler', async () => { order.push('global'); });
+    app.addRoute({
+      method: 'GET',
+      path: '/r',
+      hooks: { preHandler: async () => { order.push('route'); } },
+      handler: async () => ({ order: order.join(',') }),
+    });
+    const res = await app.inject({ method: 'GET', url: '/r' });
+    expect(res.json().order).toBe('global,route');
+    await app.close();
+  });
+});
+
 describe('WebSocket', () => {
   it('should register WebSocket handler', async () => {
     const app = createApp({ logger: false });
