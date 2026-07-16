@@ -1,0 +1,23 @@
+{
+  "name": "@tlevor/example-tickets",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/server.js",
+    "dev": "tsx src/server.ts",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@tlevor/auth": "workspace:*",
+    "@tlevor/core": "workspace:*",
+    "@tlevor/orm": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^20.12.7",
+    "tsx": "^4.10.1",
+    "typescript": "^5.4.5",
+    "vitest": "^1.6.0"
+  }
+}
