@@ -7,6 +7,7 @@ import type {
   TlevorHooks,
   RouteOptions,
   RouteSchema,
+  RouteHandler,
   PluginHandler,
   PluginMetadata,
   LoggerInterface,
@@ -40,6 +41,9 @@ export type {
   HookName,
   TlevorHooks,
   RouteSchema,
+  RouteOptions,
+  RouteHandler,
+  HTTPMethod,
   ValidationSchema,
   BodyParserOptions,
   CorsOptions,
@@ -303,6 +307,22 @@ const _validator = createValidator();
 
 function validateData(data: any, schema: ValidationSchema): { valid: boolean; errors: string[] } {
   return _validator.validate(data, schema);
+}
+
+function coerceParams(params: Record<string, string>, schema: ValidationSchema): Record<string, any> {
+  if (!schema.properties) return params;
+  const result: Record<string, any> = { ...params };
+  for (const [key, prop] of Object.entries(schema.properties) as [string, any][]) {
+    const value = result[key];
+    if (typeof value !== 'string' || !prop || typeof prop !== 'object') continue;
+    if (prop.type === 'number') {
+      if (value.trim() !== '' && !Number.isNaN(Number(value))) result[key] = Number(value);
+    } else if (prop.type === 'boolean') {
+      if (value === 'true' || value === '1') result[key] = true;
+      else if (value === 'false' || value === '0') result[key] = false;
+    }
+  }
+  return result;
 }
 
 // ==================== Serialization ====================
@@ -597,7 +617,23 @@ export class TlevorApp implements ITlevorApp {
     }
 
     const match = this.router.findRouteByMethod(method, path);
-    if (!match) { res.writeHead(404, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ error: 'Not Found', statusCode: 404 })); return; }
+    if (!match) {
+      const ctx: TlevorContext = {
+        req: new TlevorRequestImpl(req, url, path, {}, undefined, this.trustProxy),
+        res: new TlevorResponseImpl(res),
+        state: {},
+        logger: this.logger,
+      };
+      this._runHooksChain(this.hooks.onRequest, ctx)
+        .then((handled) => {
+          if (handled && !res.headersSent) {
+            res.writeHead(404, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'Not Found', statusCode: 404 }));
+          }
+        })
+        .catch((error) => this.handleError(error, ctx));
+      return;
+    }
 
     const ctx: TlevorContext = {
       req: new TlevorRequestImpl(req, url, path, match.params, undefined, this.trustProxy),
@@ -627,7 +663,10 @@ export class TlevorApp implements ITlevorApp {
       const schema = this.getRouteSchema(match);
       if (schema?.body && !this.assertValid(ctx.req.body, schema.body, ctx)) return;
       if (schema?.query && !this.assertValid(ctx.req.query, schema.query, ctx)) return;
-      if (schema?.params && !this.assertValid(ctx.req.params, schema.params, ctx)) return;
+      if (schema?.params) {
+        ctx.req.params = coerceParams(ctx.req.params, schema.params);
+        if (!this.assertValid(ctx.req.params, schema.params, ctx)) return;
+      }
 
       const preH = await this._runHooksChain(this.mergedHooks(match, 'preHandler'), ctx);
       if (!preH) return;

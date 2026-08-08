@@ -2,6 +2,7 @@ import type { HTTPMethod, RouteHandler } from '@tlevor/types';
 
 interface RouteNode {
   path: string;
+  template: string;
   children: Map<string, RouteNode>;
   paramChildren: Map<string, RouteNode>;
   wildcardChild: RouteNode | null;
@@ -20,6 +21,7 @@ interface MatchResult {
 function createNode(path: string = ''): RouteNode {
   return {
     path,
+    template: '',
     children: new Map(),
     paramChildren: new Map(),
     wildcardChild: null,
@@ -108,6 +110,7 @@ export class Router {
       current.methods.add(m);
       current.handlers.set(m, handler);
     }
+    current.template = normalizedPath;
   }
 
   findRoute(method: HTTPMethod, path: string): MatchResult | null {
@@ -119,7 +122,7 @@ export class Router {
       return null;
     }
 
-    return { ...result, path: normalizedPath };
+    return { ...result, path: result.path || normalizedPath };
   }
 
   private matchNode(
@@ -136,7 +139,7 @@ export class Router {
           for (let i = 0; i < paramNames.length; i++) {
             params[paramNames[i]] = paramValues[i];
           }
-          return { handler, method, params, path: '' };
+          return { handler, method, params, path: node.template };
         }
       }
       return null;
@@ -173,7 +176,7 @@ export class Router {
       }
       params['*'] = wildcardPath;
       for (const [method, handler] of node.wildcardChild.handlers) {
-        return { handler, method, params, path: '' };
+        return { handler, method, params, path: node.wildcardChild.template };
       }
     }
 
@@ -192,7 +195,7 @@ export class Router {
     const segments = getSegments(normalizedPath);
     const result = this.matchNodeByMethod(this.root, segments, 0, [], [], method);
     if (!result) return null;
-    return { ...result, path: normalizedPath };
+    return { ...result, path: result.path || normalizedPath };
   }
 
   private matchNodeByMethod(
@@ -209,7 +212,7 @@ export class Router {
         for (let i = 0; i < paramNames.length; i++) {
           params[paramNames[i]] = paramValues[i];
         }
-        return { handler: node.handlers.get(method)!, method, params, path: '' };
+        return { handler: node.handlers.get(method)!, method, params, path: node.template };
       }
       return null;
     }
@@ -242,7 +245,7 @@ export class Router {
       }
       params['*'] = wildcardPath;
       if (node.wildcardChild.handlers.has(method)) {
-        return { handler: node.wildcardChild.handlers.get(method)!, method, params, path: '' };
+        return { handler: node.wildcardChild.handlers.get(method)!, method, params, path: node.wildcardChild.template };
       }
     }
 

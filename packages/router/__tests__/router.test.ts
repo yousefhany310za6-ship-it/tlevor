@@ -89,3 +89,26 @@ describe('Router', () => {
     expect(routes).toHaveLength(3);
   });
 });
+
+describe('Router path templates', () => {
+  it('returns the route template path for :param routes', () => {
+    const router = new Router();
+    router.addRoute('GET', '/users/:id', () => {});
+    const result = router.findRouteByMethod('GET', '/users/123');
+    expect(result!.path).toBe('/users/:id');
+  });
+
+  it('returns the route template path for wildcard routes', () => {
+    const router = new Router();
+    router.addRoute('GET', '/files/*', () => {});
+    const result = router.findRouteByMethod('GET', '/files/a/b.txt');
+    expect(result!.path).toBe('/files/*');
+  });
+
+  it('returns the route template path for nested :param routes', () => {
+    const router = new Router();
+    router.addRoute('GET', '/users/:id/posts/:postId', () => {});
+    const result = router.findRouteByMethod('GET', '/users/1/posts/42');
+    expect(result!.path).toBe('/users/:id/posts/:postId');
+  });
+});

@@ -307,3 +307,94 @@ describe('PayloadTooLargeError', () => {
     expect(err.code).toBe('PAYLOAD_TOO_LARGE');
   });
 });
+
+describe('dynamic route regressions', () => {
+  it('applies params schema with type coercion on :param routes', async () => {
+    const a = app();
+    a.addRoute({
+      method: 'GET',
+      path: '/users/:id',
+      schema: { params: { type: 'object', properties: { id: { type: 'number' } }, required: ['id'] } },
+      handler: async (ctx) => ({ id: ctx.req.params.id, type: typeof ctx.req.params.id }),
+    });
+    const ok = await a.inject({ method: 'GET', url: '/users/123' });
+    expect(ok.statusCode).toBe(200);
+    expect(ok.json()).toEqual({ id: 123, type: 'number' });
+
+    const bad = await a.inject({ method: 'GET', url: '/users/abc' });
+    expect(bad.statusCode).toBe(400);
+    expect(bad.json().code).toBe('VALIDATION_ERROR');
+  });
+
+  it('applies body schema on :param routes', async () => {
+    const a = app();
+    a.addRoute({
+      method: 'PUT',
+      path: '/users/:id',
+      schema: { body: { type: 'object', properties: { email: { type: 'string' } } } },
+      handler: async (ctx) => ctx.req.body,
+    });
+    const bad = await a.inject({ method: 'PUT', url: '/users/1', body: { email: 12345 } });
+    expect(bad.statusCode).toBe(400);
+
+    const ok = await a.inject({ method: 'PUT', url: '/users/1', body: { email: 'a@b.c' } });
+    expect(ok.statusCode).toBe(200);
+  });
+
+  it('applies response schema on :param routes', async () => {
+    const a = app();
+    a.addRoute({
+      method: 'GET',
+      path: '/users/:id',
+      schema: { response: { type: 'object', properties: { id: { type: 'number' }, name: { type: 'string' } } } },
+      handler: async () => ({ id: 1, name: 'John', secret: 'x' }),
+    });
+    const res = await a.inject({ method: 'GET', url: '/users/5' });
+    expect(res.statusCode).toBe(200);
+    expect(res.json()).toEqual({ id: 1, name: 'John' });
+    expect(res.json()).not.toHaveProperty('secret');
+  });
+
+  it('runs route-scoped hooks on :param routes', async () => {
+    const a = app();
+    const order: string[] = [];
+    a.addRoute({
+      method: 'GET',
+      path: '/users/:id',
+      hooks: { preHandler: [async () => { order.push('route-hook'); }] },
+      handler: async () => { order.push('handler'); return { ok: true }; },
+    });
+    const res = await a.inject({ method: 'GET', url: '/users/9' });
+    expect(res.statusCode).toBe(200);
+    expect(order).toEqual(['route-hook', 'handler']);
+  });
+});
+
+describe('middleware on unmatched paths', () => {
+  it('serves static files via use() without a registered route', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'tlevor-static-route-'));
+    writeFileSync(join(dir, 'hit.txt'), 'static hit');
+    const a = app();
+    a.use(serveStatic({ root: dir, fallthrough: true }));
+    const res = await a.inject({ method: 'GET', url: '/hit.txt' });
+    expect(res.statusCode).toBe(200);
+    expect(res.body).toBe('static hit');
+  });
+
+  it('still 404s unmatched paths that no middleware handles', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'tlevor-static-404-'));
+    const a = app();
+    a.use(serveStatic({ root: dir, fallthrough: true }));
+    const res = await a.inject({ method: 'GET', url: '/nope.txt' });
+    expect(res.statusCode).toBe(404);
+  });
+
+  it('runs onRequest hooks before a 404 is sent', async () => {
+    const a = app();
+    const seen: string[] = [];
+    a.use(async (ctx) => { seen.push(ctx.req.path); });
+    const res = await a.inject({ method: 'GET', url: '/missing-route' });
+    expect(res.statusCode).toBe(404);
+    expect(seen).toEqual(['/missing-route']);
+  });
+});
