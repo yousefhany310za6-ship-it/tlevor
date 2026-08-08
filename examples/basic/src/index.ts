@@ -144,7 +144,7 @@ app.addRoute({
 app.addRoute({
   method: 'GET',
   path: '/error',
-  handler: async (ctx) => {
+  handler: async () => {
     throw new Error('This is a test error');
   },
 });

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { createContainer, Container } from '../src/index';
+import { createContainer } from '../src/index';
 
 describe('Container', () => {
   it('should create a container', () => {

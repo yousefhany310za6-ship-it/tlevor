@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { SwaggerDoc, createSwagger } from '../src/index';
+import { createSwagger } from '../src/index';
 
 describe('SwaggerDoc', () => {
   it('should create with default options', () => {

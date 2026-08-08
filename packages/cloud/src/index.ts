@@ -91,7 +91,7 @@ export function healthCheckHandler(options: HealthCheckOptions = {}) {
         const result = await Promise.race([check(), new Promise<boolean>((_, reject) => setTimeout(() => reject(new Error('timeout')), timeout))]);
         results[name] = { status: result ? 'ok' : 'error', duration: Date.now() - start };
         if (!result) healthy = false;
-      } catch (error: any) {
+      } catch {
         results[name] = { status: 'error', duration: Date.now() - start };
         healthy = false;
       }

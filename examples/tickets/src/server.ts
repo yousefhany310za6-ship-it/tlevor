@@ -224,7 +224,7 @@ export async function buildApp(db?: DatabaseAdapter): Promise<{ app: TlevorApp; 
 
 function publicUser(u: any) {
   if (!u) return null;
-  const { password, ...rest } = u;
+  const { password: _password, ...rest } = u;
   return rest;
 }
 

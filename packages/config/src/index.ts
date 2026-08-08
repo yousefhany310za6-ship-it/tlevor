@@ -75,7 +75,7 @@ export class Config {
           this.data[key] = value;
         }
       }
-    } catch (error) {
+    } catch {
       // Ignore file read errors
     }
   }

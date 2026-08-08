@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { Counter, Gauge, Histogram, MetricsRegistry, createMetricsRegistry } from '../src/index';
+import { Counter, Gauge, Histogram, createMetricsRegistry } from '../src/index';
 
 describe('Counter', () => {
   it('should increment', () => {

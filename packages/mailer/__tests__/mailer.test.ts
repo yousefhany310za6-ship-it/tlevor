@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { Mailer, TemplateEngine, createMailer, createTemplateEngine } from '../src/index';
+import { Mailer, createMailer, createTemplateEngine } from '../src/index';
 
 describe('Mailer', () => {
   it('should create mailer with default options', () => {

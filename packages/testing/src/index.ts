@@ -1,4 +1,4 @@
-import type { HTTPMethod, InjectOptions, InjectResult } from '@tlevor/types';
+import type { InjectOptions, InjectResult } from '@tlevor/types';
 import type { TlevorApp } from '@tlevor/core';
 
 export interface TestApp {

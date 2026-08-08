@@ -13,83 +13,11 @@ import { createApp } from '../../core/src/index';
 import { createAuth } from '../../auth/src/index';
 import { MemoryCache, cacheMiddleware } from '../../cache/src/index';
 import { createValidator } from '../../validation/src/index';
-import { createAdapter, syncModel, Model } from '../../orm/src/index';
-import type { DatabaseAdapter } from '../../orm/src/index';
+import { createAdapter, Model } from '../../orm/src/index';
 import { createMetricsRegistry, metricsMiddleware } from '../../monitoring/src/index';
 import { createTracer, tracingMiddleware } from '../../tracing/src/index';
 import { createSwagger, swaggerMiddleware } from '../../swagger/src/index';
 import { GraphQLSchemaBuilder, graphqlHandler } from '../../graphql/src/index';
-
-// ─── In-memory ORM adapter (no real DB needed) ──────────────────────────────
-
-class InMemoryAdapter implements DatabaseAdapter {
-  private tables: Map<string, Map<any, any>> = new Map();
-  private counter = 0;
-  private connected = false;
-
-  async connect() { this.connected = true; }
-  async disconnect() { this.connected = false; }
-  isConnected() { return this.connected; }
-
-  private table(name: string): Map<any, any> {
-    if (!this.tables.has(name)) this.tables.set(name, new Map());
-    return this.tables.get(name)!;
-  }
-
-  async findOne(table: string, where: Record<string, any>): Promise<any | null> {
-    for (const row of this.table(table).values()) {
-      if (Object.entries(where).every(([k, v]) => row[k] == v)) return row;
-    }
-    return null;
-  }
-
-  async findMany(table: string, options: any = {}): Promise<any[]> {
-    let rows = Array.from(this.table(table).values());
-    if (options.where) rows = rows.filter((r) => Object.entries(options.where).every(([k, v]) => r[k] == v));
-    if (options.orderBy) {
-      const [k, dir] = Object.entries(options.orderBy)[0];
-      rows.sort((a: any, b: any) => (dir === 'desc' ? b[k] - a[k] : a[k] - b[k]));
-    }
-    if (options.offset) rows = rows.slice(options.offset);
-    if (options.limit) rows = rows.slice(0, options.limit);
-    return rows;
-  }
-
-  async create(table: string, data: Record<string, any>): Promise<any> {
-    const row = { ...data };
-    if (row.id === undefined) row.id = `rec_${++this.counter}`;
-    this.table(table).set(row.id, row);
-    return row;
-  }
-
-  async update(table: string, id: any, data: Record<string, any>): Promise<any> {
-    const row = this.table(table).get(id);
-    if (!row) return null;
-    const merged = { ...row, ...data };
-    this.table(table).set(id, merged);
-    return merged;
-  }
-
-  async delete(table: string, id: any): Promise<boolean> {
-    return this.table(table).delete(id);
-  }
-
-  async count(table: string, where?: Record<string, any>): Promise<number> {
-    return (await this.findMany(table, { where })).length;
-  }
-
-  async upsert(table: string, data: Record<string, any>): Promise<any> {
-    if (data.id !== undefined && this.table(table).has(data.id)) return this.update(table, data.id, data);
-    return this.create(table, data);
-  }
-
-  async transaction<T>(fn: (adapter: DatabaseAdapter) => Promise<T>): Promise<T> {
-    return fn(this);
-  }
-
-  async execute() { return null; }
-  async raw() { return null; }
-}
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 

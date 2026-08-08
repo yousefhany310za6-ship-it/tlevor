@@ -67,7 +67,7 @@ export class MemoryAdapter implements DatabaseAdapter {
     return merged;
   }
 
-  async delete(table: string, id: any, primaryKey: string = 'id'): Promise<boolean> {
+  async delete(table: string, id: any, _primaryKey: string = 'id'): Promise<boolean> {
     return this.table(table).delete(id);
   }
 

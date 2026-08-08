@@ -111,7 +111,7 @@ export function parseSDL(sdl: string): ParsedType[] {
         }
         const isRequired = typeStr.includes('!');
         const isList = typeStr.includes('[');
-        const cleanType = typeStr.replace(/[!\[\]]/g, '').trim();
+        const cleanType = typeStr.replace(/[[\]!]/g, '').trim();
         fields.push({ name: fname, type: cleanType, args, isRequired, isList });
       }
     }
@@ -150,12 +150,6 @@ function parseQuery(query: string): { operationType: string; operationName: stri
     }
   }
   return { operationType, operationName, fields, variables: {} };
-}
-
-function resolveField(fieldName: string, args: Record<string, any>, resolverMap: Map<string, { type: string; resolver: Function }>): any {
-  const entry = resolverMap.get(fieldName);
-  if (!entry) return null;
-  return entry.resolver(args);
 }
 
 function executeQuery(query: string, variables: Record<string, any> | undefined, schema: GraphQLSchemaBuilder, context: Record<string, any>): any {
