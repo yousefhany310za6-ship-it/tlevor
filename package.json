@@ -8,6 +8,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "lint": "oxlint packages examples",
+    "publish:packages": "pnpm -r publish --access public",
     "clean": "pnpm -r exec rm -rf dist node_modules"
   },
   "devDependencies": {

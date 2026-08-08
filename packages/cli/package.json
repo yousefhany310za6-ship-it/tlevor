@@ -7,7 +7,8 @@
     "tlevor": "dist/index.js"
   },
   "scripts": {
-    "build": "tsc"
+    "build": "tsc",
+    "prepublishOnly": "pnpm build"
   },
   "dependencies": {
     "@tlevor/types": "workspace:*"
@@ -15,5 +16,23 @@
   "devDependencies": {
     "@types/node": "^20.12.7",
     "typescript": "^5.4.5"
+  },
+  "description": "CLI for scaffolding and generating Tlevor projects",
+  "license": "MIT",
+  "files": [
+    "dist"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yousefhany310za6-ship-it/tlevor.git"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

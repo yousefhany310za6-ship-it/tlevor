@@ -3,7 +3,33 @@
   "version": "0.1.0",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
-  "scripts": { "build": "tsc" },
-  "dependencies": { "@tlevor/types": "workspace:*" },
-  "devDependencies": { "@types/node": "^20.12.7", "typescript": "^5.4.5" }
+  "scripts": {
+    "build": "tsc",
+    "prepublishOnly": "pnpm build"
+  },
+  "dependencies": {
+    "@tlevor/types": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^20.12.7",
+    "typescript": "^5.4.5"
+  },
+  "description": "GraphQL schema builder and HTTP handler for Tlevor",
+  "license": "MIT",
+  "files": [
+    "dist"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yousefhany310za6-ship-it/tlevor.git"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
 }
