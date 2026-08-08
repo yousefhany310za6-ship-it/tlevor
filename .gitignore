@@ -11,3 +11,4 @@ packages/*/src/*.js
 packages/*/src/*.d.ts
 packages/*/src/*.map
 packages/*/src/*.d.ts.map
+.npmrc
