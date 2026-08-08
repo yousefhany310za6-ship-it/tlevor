@@ -236,18 +236,29 @@ class WebSocketConnectionImpl implements IWebSocketConnection {
   id: string;
   private ws: WebSocket;
   private req: IncomingMessage;
+  private trustProxy: boolean;
 
-  constructor(ws: WebSocket, req: IncomingMessage) {
+  constructor(ws: WebSocket, req: IncomingMessage, trustProxy: boolean = false) {
     this.id = randomUUID();
     this.ws = ws;
     this.req = req;
+    this.trustProxy = trustProxy;
   }
 
   send(data: string | Buffer): void { if (this.ws.readyState === WebSocket.OPEN) this.ws.send(data); }
   close(code?: number, reason?: string): void { this.ws.close(code, reason); }
   on(event: string, handler: (...args: any[]) => void): void { this.ws.on(event as any, handler as any); }
 
-  get remoteAddress(): string { return this.req.socket.remoteAddress || '127.0.0.1'; }
+  get remoteAddress(): string {
+    if (this.trustProxy) {
+      const forwarded = this.req.headers['x-forwarded-for'];
+      if (forwarded) {
+        const first = String(forwarded).split(',')[0].trim();
+        if (first) return first;
+      }
+    }
+    return this.req.socket.remoteAddress || '127.0.0.1';
+  }
   get request(): IncomingMessage { return this.req; }
 }
 
@@ -310,13 +321,24 @@ class TlevorRequestImpl<Body = any, Query = any, Params = any> implements Tlevor
   private _cookies: Record<string, string> | undefined;
   private _parsedCookies: boolean = false;
   private _parsedQuery: boolean = false;
+  private trustProxy: boolean;
 
-  constructor(raw: IncomingMessage, url: string, path: string, params: Params, query: Query) {
+  constructor(raw: IncomingMessage, url: string, path: string, params: Params, query: Query, trustProxy: boolean = false) {
     this.raw = raw; this.method = raw.method as HTTPMethod; this.url = url; this.path = path;
     this.headers = raw.headers; this.params = params; this._query = query; this.body = {} as Body;
+    this.trustProxy = trustProxy;
   }
 
-  get ip(): string { return this.raw.socket.remoteAddress || '127.0.0.1'; }
+  get ip(): string {
+    if (this.trustProxy) {
+      const forwarded = this.raw.headers['x-forwarded-for'];
+      if (forwarded) {
+        const first = String(forwarded).split(',')[0].trim();
+        if (first) return first;
+      }
+    }
+    return this.raw.socket.remoteAddress || '127.0.0.1';
+  }
 
   get query(): Query {
     if (!this._parsedQuery) { this._parsedQuery = true; if (!this._query) this._query = parseQuery(this.url) as Query; }
@@ -404,6 +426,7 @@ export class TlevorApp implements ITlevorApp {
   private corsOptions: CorsOptions | false;
   private bodyParserOptions: BodyParserOptions | false;
   private securityHeaders: boolean;
+  private trustProxy: boolean;
   private rateLimiter: RateLimiter | null = null;
   private routeSchemas: Map<string, RouteSchema> = new Map();
   private routeHooks: Map<string, Partial<TlevorHooks>> = new Map();
@@ -419,6 +442,7 @@ export class TlevorApp implements ITlevorApp {
     this.corsOptions = options.cors === false ? false : (options.cors === true ? {} : options.cors ?? false);
     this.bodyParserOptions = options.bodyParser === false ? false : (options.bodyParser === true ? {} : options.bodyParser ?? {});
     this.securityHeaders = options.security === true;
+    this.trustProxy = options.trustProxy === true;
   }
 
   addRoute(options: RouteConfig): void {
@@ -519,7 +543,7 @@ export class TlevorApp implements ITlevorApp {
   }
 
   private handleWebSocketConnection(ws: WebSocket, req: IncomingMessage): void {
-    const conn = new WebSocketConnectionImpl(ws, req);
+    const conn = new WebSocketConnectionImpl(ws, req, this.trustProxy);
     this.wsConnections.set(conn.id, conn);
 
     const url = req.url?.split('?')[0] || '/';
@@ -576,7 +600,7 @@ export class TlevorApp implements ITlevorApp {
     if (!match) { res.writeHead(404, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ error: 'Not Found', statusCode: 404 })); return; }
 
     const ctx: TlevorContext = {
-      req: new TlevorRequestImpl(req, url, path, match.params, undefined),
+      req: new TlevorRequestImpl(req, url, path, match.params, undefined, this.trustProxy),
       res: new TlevorResponseImpl(res),
       state: {},
       logger: this.logger,

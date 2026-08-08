@@ -281,6 +281,22 @@ describe('serveStatic', () => {
     expect(miss.statusCode).toBe(200);
     expect(miss.json().from).toBe('handler');
   });
+
+  describe('trustProxy', () => {
+    it('honors X-Forwarded-For when enabled', async () => {
+      const a = app({ trustProxy: true });
+      a.addRoute({ method: 'GET', path: '/ip', handler: (ctx) => ({ ip: ctx.req.ip }) });
+      const res = await a.inject({ method: 'GET', url: '/ip', headers: { 'x-forwarded-for': '1.2.3.4, 5.6.7.8' } });
+      expect(res.json().ip).toBe('1.2.3.4');
+    });
+
+    it('ignores X-Forwarded-For by default', async () => {
+      const a = app();
+      a.addRoute({ method: 'GET', path: '/ip', handler: (ctx) => ({ ip: ctx.req.ip }) });
+      const res = await a.inject({ method: 'GET', url: '/ip', headers: { 'x-forwarded-for': '1.2.3.4' } });
+      expect(res.json().ip).toBe('127.0.0.1');
+    });
+  });
 });
 
 describe('PayloadTooLargeError', () => {
