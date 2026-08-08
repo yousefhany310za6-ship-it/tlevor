@@ -160,9 +160,7 @@ packages/orm/src/
 ├── adapter.ts         # واجهة DatabaseAdapter
 ├── adapters/
 │   ├── memory.ts      # MemoryAdapter (مفسّر SQL بسيط مدمج)
-│   ├── sqlite.ts      # SqliteAdapter (better-sqlite3)
-│   ├── prisma.ts      # PrismaAdapter
-│   └── drizzle.ts     # DrizzleAdapter
+│   └── sqlite.ts      # SqliteAdapter (better-sqlite3)
 ├── migrations.ts      # MigrationManager
 ├── decorators.ts      # @Table, @Column, @PrimaryKey, syncModel
 └── factory.ts         # createAdapter
@@ -175,8 +173,6 @@ import { createAdapter } from '@tlevor/orm';
 
 const mem = createAdapter('memory');
 const sqlite = createAdapter('sqlite', { sqlite: { memory: true } });
-// أو: createAdapter('prisma', { prisma: client })
-// أو: createAdapter('drizzle', { drizzle: db })
 ```
 
 ### ٦.٢ النموذج (Model)
@@ -226,10 +222,6 @@ const adults = await new QueryBuilder('users')
 |--------|---------|-----------|--------|
 | `MemoryAdapter` | خريطة في الذاكرة | لا | مُختبَر |
 | `SqliteAdapter` | ملف/ذاكرة (better-sqlite3) | نعم | مُختبَر |
-| `PrismaAdapter` | عميل Prisma | عبر Prisma | غير مُختبَر* |
-| `DrizzleAdapter` | مثيل Drizzle | عبر Drizzle | غير مُختبَر* |
-
-\* يتطلبان عميلاً حقيقياً؛ موفّران كتطبيق جاهز لعقد `DatabaseAdapter`.
 
 ### ٦.٥ المزامنة عبر المُزيّنات (Decorators)
 

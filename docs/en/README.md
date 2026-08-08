@@ -160,9 +160,7 @@ packages/orm/src/
 ├── adapter.ts         # DatabaseAdapter interface
 ├── adapters/
 │   ├── memory.ts      # MemoryAdapter (built-in mini SQL interpreter)
-│   ├── sqlite.ts      # SqliteAdapter (better-sqlite3)
-│   ├── prisma.ts      # PrismaAdapter
-│   └── drizzle.ts     # DrizzleAdapter
+│   └── sqlite.ts      # SqliteAdapter (better-sqlite3)
 ├── migrations.ts      # MigrationManager
 ├── decorators.ts      # @Table, @Column, @PrimaryKey, syncModel
 └── factory.ts         # createAdapter
@@ -175,8 +173,6 @@ import { createAdapter } from '@tlevor/orm';
 
 const mem = createAdapter('memory');
 const sqlite = createAdapter('sqlite', { sqlite: { memory: true } });
-// or: createAdapter('prisma', { prisma: client })
-// or: createAdapter('drizzle', { drizzle: db })
 ```
 
 ### 6.2 The Model
@@ -226,10 +222,6 @@ const adults = await new QueryBuilder('users')
 |---------|---------|--------------|--------|
 | `MemoryAdapter` | in-memory map | no | tested |
 | `SqliteAdapter` | file/memory (better-sqlite3) | yes | tested |
-| `PrismaAdapter` | Prisma client | via Prisma | untested* |
-| `DrizzleAdapter` | Drizzle instance | via Drizzle | untested* |
-
-\* Require a live client; provided as drop-in implementations of the `DatabaseAdapter` contract.
 
 ### 6.5 Decorator-based Sync
 

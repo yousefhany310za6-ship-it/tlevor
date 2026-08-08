@@ -4,7 +4,7 @@ export class QueryBuilder {
   private table: string;
   private operation: 'select' | 'insert' | 'update' | 'delete' | 'count' | 'upsert' = 'select';
   private columns: string[] = ['*'];
-  private conditions: Array<{ field: string; op: string; value: any }> = [];
+  private andGroups: Array<Array<{ field: string; op: string; value: any }>> = [[]];
   private orderByClause: Array<{ field: string; direction: 'asc' | 'desc' }> = [];
   private limitValue?: number;
   private offsetValue?: number;
@@ -19,17 +19,23 @@ export class QueryBuilder {
   update(data: Record<string, any>): this { this.operation = 'update'; this.data = data; return this; }
   delete(): this { this.operation = 'delete'; return this; }
   count(): this { this.operation = 'count'; return this; }
-  upsert(data: Record<string, any>): this { this.operation = 'upsert'; this.data = data; return this; }
+  upsert(data: Record<string, any>, primaryKey: string = 'id'): this { this.operation = 'upsert'; this.data = data; this.primaryKeyValue = primaryKey; return this; }
 
-  where(field: string, op: string, value: any): this { this.conditions.push({ field, op, value }); return this; }
+  private primaryKeyValue: string = 'id';
+
+  where(field: string, op: string, value: any): this { this.lastGroup().push({ field, op: op.toLowerCase(), value }); return this; }
   and(field: string, op: string, value: any): this { return this.where(field, op, value); }
-  or(field: string, op: string, value: any): this { this.conditions.push({ field, op: '__or__', value }); return this; }
-  in(field: string, values: any[]): this { this.conditions.push({ field, op: 'in', value: values }); return this; }
-  notIn(field: string, values: any[]): this { this.conditions.push({ field, op: 'notIn', value: values }); return this; }
-  like(field: string, pattern: string): this { this.conditions.push({ field, op: 'like', value: pattern }); return this; }
-  between(field: string, min: any, max: any): this { this.conditions.push({ field, op: 'between', value: [min, max] }); return this; }
-  isNull(field: string): this { this.conditions.push({ field, op: 'isNull', value: null }); return this; }
-  isNotNull(field: string): this { this.conditions.push({ field, op: 'isNotNull', value: null }); return this; }
+  or(field: string, op: string, value: any): this { this.andGroups.push([{ field, op: op.toLowerCase(), value }]); return this; }
+  in(field: string, values: any[]): this { this.lastGroup().push({ field, op: 'in', value: values }); return this; }
+  notIn(field: string, values: any[]): this { this.lastGroup().push({ field, op: 'notIn', value: values }); return this; }
+  like(field: string, pattern: string): this { this.lastGroup().push({ field, op: 'like', value: pattern }); return this; }
+  between(field: string, min: any, max: any): this { this.lastGroup().push({ field, op: 'between', value: [min, max] }); return this; }
+  isNull(field: string): this { this.lastGroup().push({ field, op: 'isNull', value: null }); return this; }
+  isNotNull(field: string): this { this.lastGroup().push({ field, op: 'isNotNull', value: null }); return this; }
+
+  private lastGroup(): Array<{ field: string; op: string; value: any }> {
+    return this.andGroups[this.andGroups.length - 1];
+  }
 
   orderBy(field: string, direction: 'asc' | 'desc' = 'asc'): this { this.orderByClause.push({ field, direction }); return this; }
   limit(n: number): this { this.limitValue = n; return this; }
@@ -70,7 +76,9 @@ export class QueryBuilder {
         break;
       case 'upsert': {
         const keys = Object.keys(this.data);
-        sql = `INSERT INTO ${this.table} (${keys.join(', ')}) VALUES (${keys.map(() => '?').join(', ')}) ON CONFLICT(id) DO UPDATE SET ${keys.filter(k => k !== 'id').map(k => `${k} = VALUES(${k})`).join(', ')}`;
+        const pk = this.primaryKeyValue;
+        const updateCols = keys.filter(k => k !== pk).map(k => `${k} = VALUES(${k})`).join(', ');
+        sql = `INSERT INTO ${this.table} (${keys.join(', ')}) VALUES (${keys.map(() => '?').join(', ')}) ON CONFLICT(${pk}) DO UPDATE SET ${updateCols || `${pk} = VALUES(${pk})`}`;
         params.push(...Object.values(this.data));
         break;
       }
@@ -81,29 +89,37 @@ export class QueryBuilder {
       sql += ` ${type} JOIN ${join.table} ON ${join.on}`;
     }
 
-    if (this.conditions.length > 0) {
-      const whereClauses: string[] = [];
-      for (const cond of this.conditions) {
-        switch (cond.op) {
-          case '=': case '!=': case '<': case '>': case '<=': case '>=':
-            whereClauses.push(`${cond.field} ${cond.op} ?`); params.push(cond.value); break;
-          case 'in':
-            whereClauses.push(`${cond.field} IN (${cond.value.map(() => '?').join(', ')})`); params.push(...cond.value); break;
-          case 'notIn':
-            whereClauses.push(`${cond.field} NOT IN (${cond.value.map(() => '?').join(', ')})`); params.push(...cond.value); break;
-          case 'like':
-            whereClauses.push(`${cond.field} LIKE ?`); params.push(cond.value); break;
-          case 'between':
-            whereClauses.push(`${cond.field} BETWEEN ? AND ?`); params.push(cond.value[0], cond.value[1]); break;
-          case 'isNull':
-            whereClauses.push(`${cond.field} IS NULL`); break;
-          case 'isNotNull':
-            whereClauses.push(`${cond.field} IS NOT NULL`); break;
-          case '__or__':
-            whereClauses.push(`${cond.field} = ?`); params.push(cond.value); break;
+    const activeGroups = this.andGroups.filter((g) => g.length > 0);
+    if (activeGroups.length > 0) {
+      const renderGroup = (group: Array<{ field: string; op: string; value: any }>): string => {
+        const whereClauses: string[] = [];
+        for (const cond of group) {
+          switch (cond.op) {
+            case '=': case '!=': case '<': case '>': case '<=': case '>=':
+              whereClauses.push(`${cond.field} ${cond.op} ?`); params.push(cond.value); break;
+            case 'in':
+              whereClauses.push(`${cond.field} IN (${cond.value.map(() => '?').join(', ')})`); params.push(...cond.value); break;
+            case 'notIn':
+              whereClauses.push(`${cond.field} NOT IN (${cond.value.map(() => '?').join(', ')})`); params.push(...cond.value); break;
+            case 'like':
+              whereClauses.push(`${cond.field} LIKE ?`); params.push(cond.value); break;
+            case 'between':
+              whereClauses.push(`${cond.field} BETWEEN ? AND ?`); params.push(cond.value[0], cond.value[1]); break;
+            case 'isNull':
+              whereClauses.push(`${cond.field} IS NULL`); break;
+            case 'isNotNull':
+              whereClauses.push(`${cond.field} IS NOT NULL`); break;
+            default:
+              whereClauses.push(`${cond.field} = ?`); params.push(cond.value); break;
+          }
         }
+        return whereClauses.join(' AND ');
+      };
+      if (activeGroups.length === 1) {
+        sql += ` WHERE ${renderGroup(activeGroups[0])}`;
+      } else {
+        sql += ` WHERE ${activeGroups.map((g) => `(${renderGroup(g)})`).join(' OR ')}`;
       }
-      sql += ` WHERE ${whereClauses.join(' AND ')}`;
     }
 
     if (this.orderByClause.length > 0) {

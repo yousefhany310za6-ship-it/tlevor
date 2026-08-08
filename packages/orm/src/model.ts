@@ -62,16 +62,16 @@ export class Model {
   async create(data: Record<string, any>): Promise<any> {
     if (this.shouldStamp(this.options.createdAt)) data[this.options.createdAt] = new Date().toISOString();
     if (this.shouldStamp(this.options.updatedAt)) data[this.options.updatedAt] = new Date().toISOString();
-    return this.adapter.create(this.options.tableName, data);
+    return this.adapter.create(this.options.tableName, data, this.options.primaryKey);
   }
 
   async update(id: any, data: Record<string, any>): Promise<any> {
     if (this.shouldStamp(this.options.updatedAt)) data[this.options.updatedAt] = new Date().toISOString();
-    return this.adapter.update(this.options.tableName, id, data);
+    return this.adapter.update(this.options.tableName, id, data, this.options.primaryKey);
   }
 
   async delete(id: any): Promise<boolean> {
-    return this.adapter.delete(this.options.tableName, id);
+    return this.adapter.delete(this.options.tableName, id, this.options.primaryKey);
   }
 
   async count(where?: Record<string, any>): Promise<number> {
@@ -79,7 +79,7 @@ export class Model {
   }
 
   async upsert(data: Record<string, any>): Promise<any> {
-    return this.adapter.upsert(this.options.tableName, data);
+    return this.adapter.upsert(this.options.tableName, data, this.options.primaryKey);
   }
 
   async transaction<T>(fn: (adapter: DatabaseAdapter) => Promise<T>): Promise<T> {

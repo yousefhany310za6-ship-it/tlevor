@@ -24,6 +24,11 @@ export class MemoryAdapter implements DatabaseAdapter {
     return `rec_${n}`;
   }
 
+  private static compareValues(a: any, b: any): number {
+    if (typeof a === 'number' && typeof b === 'number') return a - b;
+    return String(a).localeCompare(String(b));
+  }
+
   async findOne(table: string, where: Record<string, any>): Promise<any | null> {
     for (const row of this.table(table).values()) {
       if (Object.entries(where).every(([k, v]) => row[k] == v)) return row;
@@ -35,30 +40,34 @@ export class MemoryAdapter implements DatabaseAdapter {
     let rows = Array.from(this.table(table).values());
     if (options.where) rows = rows.filter((r) => Object.entries(options.where!).every(([k, v]) => r[k] == v));
     if (options.orderBy) {
-      const [k, dir] = Object.entries(options.orderBy)[0];
-      rows.sort((a: any, b: any) => (dir === 'desc' ? b[k] - a[k] : a[k] - b[k]));
+      for (const [k, dir] of Object.entries(options.orderBy)) {
+        rows = rows.slice().sort((a: any, b: any) => {
+          const cmp = MemoryAdapter.compareValues(a[k], b[k]);
+          return dir === 'desc' ? -cmp : cmp;
+        });
+      }
     }
     if (options.offset) rows = rows.slice(options.offset);
     if (options.limit) rows = rows.slice(0, options.limit);
     return rows;
   }
 
-  async create(table: string, data: Record<string, any>): Promise<any> {
+  async create(table: string, data: Record<string, any>, primaryKey: string = 'id'): Promise<any> {
     const row = { ...data };
-    if (row.id === undefined) row.id = this.nextId(table);
-    this.table(table).set(row.id, row);
+    if (row[primaryKey] === undefined) row[primaryKey] = this.nextId(table);
+    this.table(table).set(row[primaryKey], row);
     return row;
   }
 
-  async update(table: string, id: any, data: Record<string, any>): Promise<any> {
+  async update(table: string, id: any, data: Record<string, any>, primaryKey: string = 'id'): Promise<any> {
     const row = this.table(table).get(id);
     if (!row) return null;
     const merged = { ...row, ...data };
-    this.table(table).set(id, merged);
+    this.table(table).set(merged[primaryKey], merged);
     return merged;
   }
 
-  async delete(table: string, id: any): Promise<boolean> {
+  async delete(table: string, id: any, primaryKey: string = 'id'): Promise<boolean> {
     return this.table(table).delete(id);
   }
 
@@ -66,9 +75,9 @@ export class MemoryAdapter implements DatabaseAdapter {
     return (await this.findMany(table, { where })).length;
   }
 
-  async upsert(table: string, data: Record<string, any>): Promise<any> {
-    if (data.id !== undefined && this.table(table).has(data.id)) return this.update(table, data.id, data);
-    return this.create(table, data);
+  async upsert(table: string, data: Record<string, any>, primaryKey: string = 'id'): Promise<any> {
+    if (data[primaryKey] !== undefined && this.table(table).has(data[primaryKey])) return this.update(table, data[primaryKey], data, primaryKey);
+    return this.create(table, data, primaryKey);
   }
 
   async transaction<T>(fn: (adapter: DatabaseAdapter) => Promise<T>): Promise<T> {
@@ -107,13 +116,20 @@ export class MemoryAdapter implements DatabaseAdapter {
       if (orderMatch) {
         const k = orderMatch[1];
         const desc = orderMatch[2].toLowerCase() === 'desc';
-        rows = rows.slice().sort((a: any, b: any) => (desc ? b[k] - a[k] : a[k] - b[k]));
+        rows = rows.slice().sort((a: any, b: any) => {
+          const cmp = MemoryAdapter.compareValues(a[k], b[k]);
+          return desc ? -cmp : cmp;
+        });
       }
-      const limitMatch = stmt.match(/LIMIT \?/i);
-      if (limitMatch) {
-        const idx = stmt.indexOf('LIMIT ?');
-        const n = params[params.length - 1];
-        rows = rows.slice(0, n);
+      const limitIdx = stmt.indexOf('LIMIT ?');
+      if (limitIdx >= 0) {
+        const limit = params[this.countPlaceholdersBefore(stmt, limitIdx)];
+        const offsetIdx = stmt.indexOf('OFFSET ?');
+        if (offsetIdx >= 0) {
+          const offset = params[this.countPlaceholdersBefore(stmt, offsetIdx)];
+          rows = rows.slice(Number(offset) || 0);
+        }
+        rows = rows.slice(0, Number(limit) || 0);
       }
       return rows;
     }
@@ -160,6 +176,14 @@ export class MemoryAdapter implements DatabaseAdapter {
     }
 
     return null;
+  }
+
+  private countPlaceholdersBefore(stmt: string, index: number): number {
+    let count = 0;
+    for (let i = 0; i < index; i++) {
+      if (stmt[i] === '?') count++;
+    }
+    return count;
   }
 
   private tableNameFrom(stmt: string): string {

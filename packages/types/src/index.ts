@@ -110,6 +110,36 @@ export interface RateLimitOptions {
   max?: number;
   window?: number;
   message?: string;
+  keyGenerator?: (req: IncomingMessage) => string;
+}
+
+export interface BodyParserOptions {
+  jsonLimit?: number;
+  urlEncodedLimit?: number;
+}
+
+export interface CorsOptions {
+  origin?: string | string[] | ((origin: string) => boolean);
+  methods?: string[];
+  allowedHeaders?: string[];
+  exposedHeaders?: string[];
+  credentials?: boolean;
+  maxAge?: number;
+}
+
+export interface StaticFilesOptions {
+  root: string;
+  prefix?: string;
+  index?: string;
+  fallthrough?: boolean;
+}
+
+export interface TlevorAppOptions {
+  logger?: LoggerInterface | false;
+  cors?: CorsOptions | boolean;
+  bodyParser?: BodyParserOptions | boolean;
+  security?: boolean;
+  trustProxy?: boolean;
 }
 
 export interface WebSocketOptions {
@@ -136,12 +166,14 @@ export interface TlevorApp {
   addRoute(options: RouteOptions): void;
   addHook(name: HookName, handler: HookHandler): void;
   use(middleware: HookHandler): void;
-  registerPlugin(plugin: PluginHandler, opts?: any): void;
+  registerPlugin(plugin: PluginHandler, opts?: any): void | Promise<void>;
   rateLimit(options: RateLimitOptions): void;
   ws(path: string, handler: WebSocketHandler): void;
   inject(opts: InjectOptions): Promise<InjectResult>;
   listen(port: number, host?: string): Promise<void>;
   close(): Promise<void>;
+  getServer(): any;
+  getWebSocketConnections(): Map<string, WebSocketConnection>;
 }
 
 export interface InjectOptions {

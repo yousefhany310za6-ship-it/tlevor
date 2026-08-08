@@ -57,25 +57,28 @@ export class SqliteAdapter implements DatabaseAdapter {
     return this.db.prepare(sql).all(...params);
   }
 
-  async create(table: string, data: Record<string, any>): Promise<any> {
+  async create(table: string, data: Record<string, any>, primaryKey: string = 'id'): Promise<any> {
     const keys = Object.keys(data);
     const placeholders = keys.map(() => '?').join(', ');
     const sql = `INSERT INTO ${table} (${keys.join(', ')}) VALUES (${placeholders})`;
     const info = this.db.prepare(sql).run(...keys.map((k) => toSqlValue(data[k])));
+    if (data[primaryKey] !== undefined) {
+      return this.findOne(table, { [primaryKey]: data[primaryKey] }) || { ...data };
+    }
     const inserted = this.db.prepare(`SELECT * FROM ${table} WHERE rowid = ?`).get(info.lastInsertRowid);
-    return inserted || { ...data, id: info.lastInsertRowid };
+    return inserted || { ...data, [primaryKey]: info.lastInsertRowid };
   }
 
-  async update(table: string, id: any, data: Record<string, any>): Promise<any> {
+  async update(table: string, id: any, data: Record<string, any>, primaryKey: string = 'id'): Promise<any> {
     const keys = Object.keys(data);
-    if (keys.length === 0) return this.findOne(table, { id });
+    if (keys.length === 0) return this.findOne(table, { [primaryKey]: id });
     const assignments = keys.map((k) => `${k} = ?`).join(', ');
-    this.db.prepare(`UPDATE ${table} SET ${assignments} WHERE id = ?`).run(...keys.map((k) => toSqlValue(data[k])), toSqlValue(id));
-    return this.findOne(table, { id });
+    this.db.prepare(`UPDATE ${table} SET ${assignments} WHERE ${primaryKey} = ?`).run(...keys.map((k) => toSqlValue(data[k])), toSqlValue(id));
+    return this.findOne(table, { [primaryKey]: id });
   }
 
-  async delete(table: string, id: any): Promise<boolean> {
-    const info = this.db.prepare(`DELETE FROM ${table} WHERE id = ?`).run(id);
+  async delete(table: string, id: any, primaryKey: string = 'id'): Promise<boolean> {
+    const info = this.db.prepare(`DELETE FROM ${table} WHERE ${primaryKey} = ?`).run(id);
     return info.changes > 0;
   }
 
@@ -85,12 +88,12 @@ export class SqliteAdapter implements DatabaseAdapter {
     return Number(row?.c || 0);
   }
 
-  async upsert(table: string, data: Record<string, any>): Promise<any> {
-    if (data.id !== undefined) {
-      const existing = await this.findOne(table, { id: data.id });
-      if (existing) return this.update(table, data.id, data);
+  async upsert(table: string, data: Record<string, any>, primaryKey: string = 'id'): Promise<any> {
+    if (data[primaryKey] !== undefined) {
+      const existing = await this.findOne(table, { [primaryKey]: data[primaryKey] });
+      if (existing) return this.update(table, data[primaryKey], data, primaryKey);
     }
-    return this.create(table, data);
+    return this.create(table, data, primaryKey);
   }
 
   async transaction<T>(fn: (adapter: DatabaseAdapter) => Promise<T>): Promise<T> {
