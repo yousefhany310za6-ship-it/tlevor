@@ -5,10 +5,7 @@ import { join } from 'path';
 
 const VERSION = '0.1.0';
 
-const args = process.argv.slice(2);
-const command = args[0];
-
-function showHelp(): void {
+export function showHelp(): void {
   console.log(`
 \x1b[1mTlevor CLI\x1b[0m v${VERSION}
 
@@ -29,16 +26,15 @@ function showHelp(): void {
 `);
 }
 
-function showVersion(): void {
+export function showVersion(): void {
   console.log(`Tlevor CLI v${VERSION}`);
 }
 
-function initProject(name: string): void {
+export function initProject(name: string): void {
   const projectDir = join(process.cwd(), name);
   
   if (existsSync(projectDir)) {
-    console.error(`\x1b[31mError: Directory "${name}" already exists.\x1b[0m`);
-    process.exit(1);
+    throw new Error(`Directory "${name}" already exists.`);
   }
 
   console.log(`\x1b[34mCreating Tlevor project "${name}"...\x1b[0m`);
@@ -164,8 +160,7 @@ function generateComponent(type: string, name: string): void {
   const srcDir = join(process.cwd(), 'src');
   
   if (!existsSync(srcDir)) {
-    console.error(`\x1b[31mError: No "src" directory found. Run this command from your project root.\x1b[0m`);
-    process.exit(1);
+    throw new Error('No "src" directory found. Run this command from your project root.');
   }
 
   let targetDir: string;
@@ -223,43 +218,48 @@ export const ${name}Middleware: HookHandler = async (ctx) => {
       break;
 
     default:
-      console.error(`\x1b[31mError: Unknown component type "${type}". Use "route", "plugin", or "middleware".\x1b[0m`);
-      process.exit(1);
+      throw new Error(`Unknown component type "${type}". Use "route", "plugin", or "middleware".`);
   }
 
   mkdirSync(targetDir, { recursive: true });
   const filePath = join(targetDir, `${name}.ts`);
   
   if (existsSync(filePath)) {
-    console.error(`\x1b[31mError: File "${filePath}" already exists.\x1b[0m`);
-    process.exit(1);
+    throw new Error(`File "${filePath}" already exists.`);
   }
 
   writeFileSync(filePath, content);
   console.log(`\x1b[32m✓ Generated ${type} "${name}" at ${filePath}\x1b[0m`);
 }
 
-// Main
-if (!command || command === 'help') {
-  showHelp();
-} else if (command === 'version') {
-  showVersion();
-} else if (command === 'init') {
-  const name = args[1];
-  if (!name) {
-    console.error(`\x1b[31mError: Project name is required. Usage: tlevor init <name>\x1b[0m`);
-    process.exit(1);
+export function run(args: string[]): number {
+  const command = args[0];
+  try {
+    if (!command || command === 'help') {
+      showHelp();
+    } else if (command === 'version') {
+      showVersion();
+    } else if (command === 'init') {
+      const name = args[1];
+      if (!name) throw new Error('Project name is required. Usage: tlevor init <name>');
+      initProject(name);
+    } else if (command === 'generate') {
+      const type = args[1];
+      const name = args[2];
+      if (!type || !name) throw new Error('Type and name are required. Usage: tlevor generate <type> <name>');
+      generateComponent(type, name);
+    } else {
+      throw new Error(`Unknown command "${command}". Run "tlevor help" for usage.`);
+    }
+    return 0;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error(`\x1b[31mError: ${message}\x1b[0m`);
+    return 1;
   }
-  initProject(name);
-} else if (command === 'generate') {
-  const type = args[1];
-  const name = args[2];
-  if (!type || !name) {
-    console.error(`\x1b[31mError: Type and name are required. Usage: tlevor generate <type> <name>\x1b[0m`);
-    process.exit(1);
-  }
-  generateComponent(type, name);
-} else {
-  console.error(`\x1b[31mError: Unknown command "${command}". Run "tlevor help" for usage.\x1b[0m`);
-  process.exit(1);
+}
+
+// Main: run only when executed directly as the CLI binary.
+if (typeof require !== 'undefined' && require.main === module) {
+  process.exit(run(process.argv.slice(2)));
 }
